@@ -1,0 +1,26 @@
+═══════════════════════════════════════════════════════════════════════════════
+PLACEHOLDER — REPLACE WITH A REAL .json BEFORE RELEASE
+═══════════════════════════════════════════════════════════════════════════════
+
+File name  : core_pod.json
+Real format: JSON (Minecraft blockstate file)
+Location   : assets/create_biocapital/blockstates/
+
+Suggested contents:
+
+{
+  "variants": {
+    "facing=north": { "model": "create_biocapital:block/core_pod" },
+    "facing=south": { "model": "create_biocapital:block/core_pod", "y": 180 },
+    "facing=west":  { "model": "create_biocapital:block/core_pod", "y": 270 },
+    "facing=east":  { "model": "create_biocapital:block/core_pod", "y": 90 }
+  }
+}
+
+(The four cardinal facings; the block has a single model that already
+encodes the front direction. The block's FACING property is the
+BlockStateProperties.HORIZONTAL_FACING.)
+
+Once the file is provided, delete this .txt and place the real .json at
+the expected location.
+═══════════════════════════════════════════════════════════════════════════════

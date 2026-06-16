@@ -1,0 +1,70 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/biocapital-core",
+    "crates/biocapital-bank",
+    "crates/biocapital-contract",
+    "crates/biocapital-pod",
+    "crates/biocapital-environment",
+    "crates/biocapital-creature",
+    "crates/biocapital-dglab",
+    "crates/biocapital-webui",
+    "crates/biocapital-grpc",
+    "crates/biocapital-pg",
+    "crates/biocapital-jni",
+    "crates/biocapital-cli",
+]
+
+[workspace.package]
+version = "0.1.0-alpha.1"
+edition = "2024"
+license = "Polyform-Shield-1.0.0 OR MIT"
+rust-version = "1.96"
+
+[workspace.dependencies]
+# Async runtime — medium set (rt-multi-thread + macros + net + time + sync +
+# signal + fs + process + io-util). Avoids "full" payload while still covering
+# the gRPC server, signal-based config reload, daily 03:00 backup cron, and
+# Web UI file reads.
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "time",
+    "sync",
+    "signal",
+    "fs",
+    "process",
+    "io-util",
+] }
+# HTTP / WebSocket
+axum = "0.8"
+# gRPC — keep tonic and prost in lock-step at 0.14
+tonic = "0.14"
+prost = "0.14"
+# PostgreSQL
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "migrate", "uuid", "chrono", "json"] }
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Config
+figment = { version = "0.10", features = ["toml", "env"] }
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+# Error handling
+thiserror = "1"
+anyhow = "1"
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+# UUID
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+# Async traits — kept because the project heavily uses Arc<dyn Trait>
+# dynamic dispatch (Repository / AuditWriter / Service / Clock), and
+# Rust's native AFIT (async fn in trait) is not dyn-compatible.
+# The macro gives us `BoxFuture`-shaped return types behind the scenes
+# so we can store `Arc<dyn PlayerStateRepository>` etc. without
+# redesigning the DI container.
+async-trait = "0.1"
+# Testing
+proptest = "1"

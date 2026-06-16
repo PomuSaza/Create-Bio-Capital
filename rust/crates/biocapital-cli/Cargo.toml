@@ -1,0 +1,21 @@
+[package]
+name = "biocapital-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "CLI entry (start / migrate / backup) per doc/14-rust-services.md"
+
+[dependencies]
+# Workspace deps
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+# Config / TOML
+toml = "0.8"

@@ -1,0 +1,616 @@
+// generated-from: doc/14-rust-services.md §3.2
+// last_synced: 2026-06-14
+//
+// Canonical gRPC schema for the Create: Bio-Capital Rust server.
+// All services live in the `biocapital.v1` package; breaking changes must
+// bump to `biocapital.v2` (see doc/14-rust-services.md §3.3).
+//
+// Field decisions are tracked in doc/14-rust-services.md §3.2.2 (字段来源索引).
+
+syntax = "proto3";
+package biocapital.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ── 通用 ─────────────────────────────────────
+message Uuid { bytes value = 1; }              // 16-byte big-endian UUID
+message PlayerIdentifier { Uuid player_uuid = 1; }
+
+// inferred from 04-core-pod.md §6.3 (PostgreSQL core_pods PRIMARY KEY)
+message PodIdentifier {
+  Uuid world_uuid = 1;            // 世界唯一标识
+  string dimension = 2;           // 维度 ID (overworld / the_nether / ...)
+  int64 pos_x = 3;                // 方块坐标 X（与 SQL BIGINT 对齐）
+  int64 pos_y = 4;                // 方块坐标 Y
+  int64 pos_z = 5;                // 方块坐标 Z
+}
+
+message BlockPos {
+  int32 x = 1;
+  int32 y = 2;
+  int32 z = 3;
+}
+
+message Empty {}
+
+// 通用 ListRequest：limit/offset + 可选 owner 过滤（被多处复用）
+message ListRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  PlayerIdentifier player_filter = 3;
+}
+
+// ── PlayerState ─────────────────────────────
+service PlayerStateService {
+  rpc GetState(PlayerIdentifier) returns (PlayerState);
+  rpc UpdateState(PlayerStateUpdate) returns (PlayerState);
+  rpc ApplyDamage(DamageRequest) returns (DamageResponse);
+  rpc AddPleasure(PleasureRequest) returns (PlayerState);
+  rpc AddHunger(HungerRequest) returns (PlayerState);
+}
+
+message PlayerState {
+  Uuid player_uuid = 1;
+  float pleasure = 2;
+  float hunger = 3;
+  float hidden_hp = 4;
+  int32 low_hp_hits = 5;
+  // key ∈ {HEAD, NECK, CHEST, BELLY, GENITAL, BUTT, BACK, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG, FEET} (12 parts, see 03-body-development.md §1.1)
+  map<string, float> parts = 6;  // BodyPart name -> dev value
+  google.protobuf.Timestamp updated_at = 7;
+  // inferred from 02 §1.1 + 99 §5 player_state 表
+  int32 defeat_count = 8;        // 累计战败状态次数（02 §3.4）
+  int64 active_contracts = 9;    // 当前活跃契约数（12 §2.1 指令输出）
+  int32 max_hunger = 10;         // 当前 max hunger（03 §3.2 腹部开发度影响）
+}
+
+// inferred from 02 §1.1 (partial-update 风格)
+// 2026-06-14 user decision: 移除 op 字段；proto3 字段存在性自动推断语义（set vs delta 由调用方约定）
+message PlayerStateUpdate {
+  PlayerIdentifier target = 1;
+  google.protobuf.Timestamp updated_at = 2;
+  // partial 字段（0 = 不修改）；caller 应只填需要改的字段
+  float pleasure = 3;            // 0 = no-op
+  float hunger = 4;
+  float hidden_hp = 5;
+  int32 low_hp_hits = 6;
+  // key ∈ {HEAD, NECK, CHEST, BELLY, GENITAL, BUTT, BACK, LEFT_ARM, RIGHT_ARM, LEFT_LEG, RIGHT_LEG, FEET} (12 parts, see 03-body-development.md §1.1)
+  // 语义：caller 通过填写全量（set）或部分 delta（与历史 parts 合并）由调用方约定
+  map<string, float> parts = 7;  // BodyPart name -> dev value
+}
+
+message DamageRequest {
+  PlayerIdentifier target = 1;
+  float amount = 2;
+  string source = 3;             // e.g. "zombie", "core_pod", "lava"
+  string part = 4;               // BodyPart name；空 = 全身
+  // inferred from 99 §2.2（request_id 用于幂等性去重）
+  Uuid request_id = 5;
+}
+
+message DamageResponse {
+  PlayerState new_state = 1;
+  bool killed = 2;               // 对应 02 §3.4：原版死亡不复存在，始终为 false
+}
+
+message PleasureRequest {
+  PlayerIdentifier target = 1;
+  float amount = 2;
+  string part = 3;               // BodyPart name；空 = 全身快感
+  string source = 4;             // "BERRY" | "MOB_HIT" | "LAVA" | "CHARM_POTION" | "DEFEAT" | ...
+  Uuid request_id = 5;
+}
+
+message HungerRequest {
+  PlayerIdentifier target = 1;
+  float amount = 2;              // 正数 = 喂食，负数 = 衰减
+  string source = 3;             // "NATURAL_DECAY" | "FOOD" | "SWAMP" | ...
+  Uuid request_id = 4;
+}
+
+// ── Bank ────────────────────────────────────
+// 2026-06-14 task #83 (18-tg-whitelist): 5 new RPCs appended for
+// the hardware-token subsystem; TokenResponse / TokenListResponse
+// are reused from the DglabService definition below.
+service BankService {
+  rpc GetBalance(AccountRequest) returns (BalanceResponse);
+  rpc Deposit(DepositRequest) returns (BalanceResponse);
+  rpc Withdraw(WithdrawRequest) returns (BalanceResponse);
+  rpc Transfer(TransferRequest) returns (BalanceResponse);
+  rpc GetHistory(HistoryRequest) returns (HistoryResponse);
+  rpc LockDevice(LockDeviceRequest) returns (LockDeviceResponse);
+  rpc UnlockDevice(UnlockDeviceRequest) returns (LockDeviceResponse);
+  rpc GenerateInviteCode(AccountRequest) returns (InviteCodeResponse);
+  rpc AcceptInviteCode(AcceptInviteRequest) returns (LockDeviceResponse);
+
+  // ── 硬件 token 子系统（doc/18 §7）──────────────────
+  // Authenticate 排在最末（method_id = 9）；前面的 9 个 RPC
+  // method_id 0..=8 在 BankManager.java 的 callBank(methodId, ...)
+  // dispatch 中已固定。Authenticate 在 Java 端用 methodId = 9
+  // 调 NativeRustBindings.callBank(9, ...)。18 §3.1 玩家登录
+  // 时序：Java 端 PlayerLoggedInEvent → callAuthenticate(9, ...)
+  // → 拒绝时 disconnect(reason)。
+  rpc RequestHardwareToken(AccountRequest) returns (TokenResponse);
+  rpc BindHardware(BindHardwareRequest) returns (TokenResponse);
+  rpc ListHardware(AccountRequest) returns (TokenListResponse);
+  rpc RevokeHardware(RevokeHardwareRequest) returns (TokenResponse);
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+}
+
+// 2026-06-14 task #83 (18-tg-whitelist §7): hardware-token 子系统的 4 个新 message
+message BindHardwareRequest {
+  Uuid owner_uuid = 1;
+  string hardware_id_hash = 2;  // SHA-256 + base32, 52 chars (18 §4.2)
+  string token = 3;             // UUIDv4 (玩家从 Web UI / 复制 token 提交)
+}
+
+message RevokeHardwareRequest {
+  Uuid owner_uuid = 1;
+  Uuid token_id = 2;
+}
+
+message AuthenticateRequest {
+  Uuid player_uuid = 1;
+  string player_username = 2;
+  string hardware_id_hash = 3;  // Java 端 HardwareIdCollector 自动采集并附在请求中
+}
+
+message AuthenticateResponse {
+  bool allowed = 1;
+  // "whitelisted" | "hardware_token_valid" | "no_hardware_token" |
+  // "hardware_token_expired" | "hardware_id_mismatch"
+  string reason = 2;
+}
+
+// inferred from 08 §5.1 bank_accounts SQL
+message AccountRequest {
+  PlayerIdentifier player = 1;   // 即 bank_accounts.owner_uuid
+  string device_id = 2;          // 用于设备锁定校验（08 §3.5）
+}
+
+message BalanceResponse {
+  int64 balance = 1;             // cat-grass units
+  int64 max_balance = 2;         // bank_accounts.max_balance（默认 100,000,000）
+  bool device_locked = 3;        // true = 此 device_id 与 bank_card.device_lock 不匹配
+  Uuid account_uuid = 4;         // bank_accounts.account_uuid
+}
+
+message DepositRequest {
+  PlayerIdentifier player = 1;
+  int64 amount = 2;
+  Uuid batch_id = 3;             // cat_grass_batches.batch_id（08 §2.2 批次号追踪）
+  Uuid request_id = 4;           // 幂等性去重（08 §5.3 + 99 §2.2）
+}
+
+message WithdrawRequest {
+  PlayerIdentifier player = 1;
+  int64 amount = 2;
+  Uuid request_id = 3;
+}
+
+message TransferRequest {
+  PlayerIdentifier from = 1;
+  PlayerIdentifier to   = 2;
+  int64 amount = 3;
+  string memo = 4;               // 可选备注（写入 bank_transactions 或 audit）
+  Uuid request_id = 5;
+}
+
+message HistoryRequest {
+  PlayerIdentifier player = 1;
+  int32 limit = 2;               // 默认 16，与现有 Java BankMenu 一致（08 §3.4）
+  int64 before_tick_millis = 3;  // 翻页游标：返回严格早于此时间的 N 条
+}
+
+message HistoryResponse {
+  repeated BankTransaction entries = 1;
+  int64 next_before_tick_millis = 2;  // 翻页用；-1 = 已到末尾
+}
+
+// inferred from 08 §5.1 bank_transactions SQL
+message BankTransaction {
+  Uuid tx_id = 1;                // bank_transactions.tx_id
+  Uuid account_uuid = 2;         // bank_transactions.account_uuid
+  string op = 3;                 // "DEPOSIT" | "WITHDRAW" | "TRANSFER_OUT" | "TRANSFER_IN"
+  int64 amount = 4;
+  int64 balance_after = 5;       // bank_transactions.balance_after
+  Uuid counterparty_uuid = 6;    // bank_transactions.counterparty_uuid（可空）
+  string counterparty_name = 7;  // bank_transactions.counterparty_name
+  int64 tick_millis = 8;         // bank_transactions.tick_millis
+  Uuid request_id = 9;           // bank_transactions.request_id
+}
+
+message LockDeviceRequest {
+  PlayerIdentifier player = 1;
+  string device_id = 2;          // 写入 bank_card.device_lock（08 §3.5）
+}
+
+message LockDeviceResponse {
+  bool success = 1;
+  bool already_locked = 2;       // 已被其他 device 锁定
+  string current_device_id = 3;  // 当前 device_lock（便于 UI 展示）
+}
+
+message UnlockDeviceRequest {
+  PlayerIdentifier player = 1;
+  string device_id = 2;
+  string invite_code = 3;        // 08 §3.5 邀请码机制
+}
+
+message InviteCodeResponse {
+  string invite_code = 1;        // UUIDv4（08 §3.5）
+  google.protobuf.Timestamp expires_at = 2;  // 默认 10 分钟（12 §2.7）
+}
+
+message AcceptInviteRequest {
+  PlayerIdentifier player = 1;
+  string invite_code = 2;
+}
+
+// ── Contract ────────────────────────────────
+service ContractService {
+  rpc ProposeContract(ContractProposeRequest) returns (ContractResponse);
+  rpc AcceptContract(ContractAcceptRequest) returns (ContractResponse);
+  rpc RejectContract(ContractRejectRequest) returns (ContractResponse);
+  rpc TerminateContract(ContractTerminateRequest) returns (ContractResponse);
+  rpc RedeemContract(ContractRedeemRequest) returns (ContractResponse);
+  rpc GetContract(ContractRequest) returns (ContractResponse);
+  rpc ListContracts(ListRequest) returns (ContractListResponse);
+}
+
+// inferred from 09 §2.1 + §5.1 contracts SQL
+message ContractProposeRequest {
+  PlayerIdentifier master  = 1;  // contracts.master_uuid
+  PlayerIdentifier slave   = 2;  // contracts.slave_uuid
+  string terms_type = 3;         // terms.type: "DAILY_WAGE_TRANSFER" | "MINING_QUOTA" | "BREEDING_CONSENT" | "CUSTOM"
+  string terms_json = 4;         // terms.parameters JSON 文本（contracts.terms JSONB）
+  float revenue_share_pct = 5;   // contracts.revenue_share_pct (0..100)
+  int64 redemption_cost = 6;     // contracts.redemption_cost (cat grass)
+  int64 expires_tick = 7;        // contracts.expires_tick（0 = 永久）
+  Uuid request_id = 8;           // 幂等性
+}
+
+message ContractAcceptRequest   { Uuid contract_id = 1; Uuid request_id = 2; }
+message ContractRejectRequest   { Uuid contract_id = 1; string reason = 2; Uuid request_id = 3; }
+message ContractTerminateRequest { Uuid contract_id = 1; string reason = 2; Uuid request_id = 3; }
+message ContractRedeemRequest   { Uuid contract_id = 1; Uuid request_id = 2; }
+message ContractRequest         { Uuid contract_id = 1; }
+
+// inferred from 09 §2.1 + 99 §3.1 事件所需字段
+message ContractResponse {
+  Uuid contract_id = 1;          // contracts.contract_id
+  PlayerIdentifier master = 2;
+  PlayerIdentifier slave  = 3;
+  string status = 4;             // "PENDING" | "ACTIVE" | "TERMINATED" | "EXPIRED"
+  string terms_type = 5;
+  string terms_json = 6;
+  float revenue_share_pct = 7;
+  int64 redemption_cost = 8;
+  int64 created_tick = 9;        // contracts.created_tick
+  int64 activated_tick = 10;     // contracts.activated_tick（3 秒后自动激活）
+  int64 expires_tick = 11;       // contracts.expires_tick
+  int64 terminated_tick = 12;    // contracts.terminated_tick
+  string termination_reason = 13;  // contracts.termination_reason
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// 替代原 ListResponse：每个 service 单独定义元素类型
+message ContractListResponse {
+  repeated ContractResponse contracts = 1;
+  int32 total_count = 2;         // 总数（不含 limit/offset 截断）
+}
+
+// ── CorePod ─────────────────────────────────
+service CorePodService {
+  rpc TickPod(PodIdentifier) returns (PodTickResult);
+  rpc EnterPod(PodEnterRequest) returns (PodEnterResponse);
+  rpc ExitPod(PodIdentifier) returns (PodExitResponse);
+  rpc GetPodState(PodIdentifier) returns (PodState);
+}
+
+message PodTickResult {
+  int64 stress_units = 1;        // 应力容量 SU（04 §2.2 calculateAddedStressCapacity）
+  double rpm = 2;                // GENERATED_RPM（04 §2.2，默认 16.0）
+  int32 input_fluid_mb = 3;      // 输入槽余量 mB
+  int32 output_fluid_mb = 4;     // 输出槽余量 mB
+  int32 byproduct_count = 5;     // 产出的欲望碎片数（04 §3.4）
+  int64 endurance = 6;           // 剩余耐久 ticks
+  bool depleted = 7;             // 耐久耗尽（04 §4.4 强制终止）
+  google.protobuf.Timestamp tick_at = 8;
+}
+
+message PodEnterRequest {
+  PodIdentifier pod = 1;
+  PlayerIdentifier player = 2;
+  // 04 §4.2 限制条件
+  bool hunger_above_5 = 3;       // 玩家饥饿值 >= 5
+  int32 input_fluid_mb = 4;      // 核心舱当前输入槽余量
+  int64 endurance = 5;           // 核心舱当前耐久
+}
+
+message PodEnterResponse {
+  bool accepted = 1;             // 是否进入托管状态
+  string reason = 2;             // 拒绝原因（"occupied" | "hunger" | "no_fluid" | "no_endurance"）
+  Uuid host_uuid = 3;            // 当前 host（即使 accepted=false 也可能存在）
+}
+
+message PodExitResponse {
+  bool success = 1;
+  Uuid previous_host = 2;        // 退出前的 host
+}
+
+// inferred from 04 §6.3 core_pods SQL
+message PodState {
+  PodIdentifier pod = 1;
+  Uuid host_uuid = 2;            // core_pods.host_uuid（NULL = 无人托管）
+  int64 endurance = 3;           // core_pods.endurance
+  int32 recipe_cooldown = 4;     // core_pods.recipe_cooldown
+  string input_fluid = 5;        // core_pods.input_fluid
+  string output_fluid = 6;       // core_pods.output_fluid
+  int32 input_fluid_mb = 7;
+  int32 output_fluid_mb = 8;
+  int32 byproduct_count = 9;     // core_pods.byproduct_count
+  double stress_units = 10;      // 当前 SU 输出
+  string status = 11;            // "IDLE" | "HOSTED" | "OFFLINE_HOSTED" | "DEPLETED"
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// ── HostileMob ──────────────────────────────
+service HostileMobService {
+  rpc ApplyHostileDamage(DamageRequest) returns (DamageResponse);
+  rpc GetDropChance(CreatureIdRequest) returns (DropChanceResponse);
+}
+
+message CreatureIdRequest {
+  string creature_id = 1;        // variant_zombie / minecraft:zombie ...
+}
+
+// inferred from 06 §8.3 mob_replacements SQL
+message DropChanceResponse {
+  float desire_fragment_chance = 1;  // mob_replacements.drop_chance_desire_fragment
+  // 原版 drops：列出 物品注册名 -> 概率；留作扩展
+  map<string, float> vanilla_drops = 2;
+  bool enabled = 3;              // mob_replacements.enabled
+}
+
+// ── Environment ─────────────────────────────
+service EnvironmentService {
+  rpc ApplyEnvironmentEffect(EnvironmentEffectRequest) returns (EnvironmentEffectResponse);
+  rpc GetEnvironmentModifiers(BlockPos) returns (EnvironmentModifiers);
+}
+
+// 2026-06-14 user decision: intensity (float) + duration_ticks (int64) 已就位
+message EnvironmentEffectRequest {
+  BlockPos pos = 1;
+  string environment = 2;        // "LAVA" | "SWAMP_MUD" | "SAND" | "MAGMA_BLOCK"
+  string effect_id = 3;          // 子效果 id（多效果细分用）
+  float intensity = 4;           // 0..1+ 倍率（07 §8 公式缩放）
+  int64 duration_ticks = 5;      // 持续 tick；0 = 瞬时（2026-06-14 user decision: 与 PG BIGINT 对齐）
+  Uuid entity_uuid = 6;          // 受影响实体（玩家或生物）
+}
+
+// inferred from 07 §8.3 environment_effects SQL
+message EnvironmentEffectResponse {
+  bool applied = 1;
+  float pleasure_delta = 2;      // 实际施加的 pleasure 增量
+  float hunger_delta = 3;        // 实际施加的 hunger 增量
+  bool triggered_defeat = 4;     // 触发战败状态（07 §6）
+}
+
+message EnvironmentModifiers {
+  // 07 §8.3 风格的 modifier 总览
+  float pleasure_modifier = 1;   // 累计 +pleasure / tick
+  float hunger_modifier = 2;     // 累计 -hunger / tick
+  float movement_modifier = 3;   // 移动速度倍率（沼泽 0.5）
+  bool no_fatal_damage = 4;      // 永不死亡（07 §2.1 / §3.2）
+  string primary_environment = 5;// 主要环境（优先级最高者）
+}
+
+// ── Creature ────────────────────────────────
+service CreatureService {
+  rpc ListCreatures(ListRequest) returns (CreatureListResponse);
+  rpc GetCreature(CreatureRequest) returns (CreatureConfig);
+  rpc ReloadCreatures(Empty) returns (ReloadResponse);
+}
+
+message CreatureListResponse {
+  repeated string creature_ids = 1;
+}
+
+message CreatureRequest {
+  string creature_id = 1;
+}
+
+// inferred from 13 §2.1 creatures.json 全字段
+message CreatureConfig {
+  string creature_id = 1;                    // creatures.json.creature_id
+  string display_name_zh = 2;                // display_name.zh_cn
+  string display_name_en = 3;                // display_name.en_us
+  string model_source = 4;                   // 继承哪个原版 mob
+  string creature_type = 5;                  // "MONSTER" | "PASSIVE" | "BOSS"
+  int32 geckolib_format_version = 6;         // 当前固定 2
+  // audio
+  string audio_ambient = 7;
+  string audio_hurt = 8;
+  string audio_death = 9;
+  string audio_step = 10;
+  float audio_volume = 11;
+  float audio_pitch = 12;
+  // textures
+  string texture_main = 13;
+  string texture_overlay = 14;               // 可空
+  // model
+  string model_geo = 15;
+  repeated string model_animations = 16;
+  string model_idle_animation = 17;
+  float model_scale = 18;
+  // stats
+  float max_health = 19;
+  float attack_damage = 20;
+  float movement_speed = 21;
+  // drops (JSONB-like；为简化留作 raw JSON 字符串)
+  string drops_override_json = 22;
+  // meta
+  string replaces = 23;                      // 替换哪个原版 mob
+  repeated string tags = 24;                 // tags[]
+  bool enabled = 25;                         // creature_configs.enabled
+  int64 loaded_tick = 26;                    // creature_configs.loaded_tick
+  google.protobuf.Timestamp loaded_at = 27;
+}
+
+message ReloadResponse {
+  int32 reloaded_count = 1;
+  repeated string failed_creature_ids = 2;   // 解析失败的 creature
+  google.protobuf.Timestamp reloaded_at = 3;
+}
+
+// ── DG_LAB ──────────────────────────────────
+// 2026-06-14 晚 user task #110: 服务从 5 RPC 扩到 8 RPC（+GetPlayerConfig /
+// +SetPlayerConfig / +AdminOverride）。Range 0..=200 per channel（10 §2.5）；
+// trigger_source 6 值（10 §3.2）；audit_dglab.op 9 值（10 §5 + §3.4 + §3.5）。
+service DglabService {
+  // 原有 5 RPC
+  rpc SetStrength(SetStrengthRequest) returns (SetStrengthResponse);
+  rpc GetStrength(AccountRequest) returns (StrengthResponse);
+  rpc GenerateToken(AccountRequest) returns (TokenResponse);
+  rpc RevokeToken(TokenRequest) returns (TokenResponse);
+  rpc ListTokens(ListRequest) returns (TokenListResponse);
+
+  // 新增 3 RPC（10 §3.2 + §3.4 + §3.5，task #110）
+  rpc GetPlayerConfig(AccountRequest) returns (PlayerDglabConfig);
+  rpc SetPlayerConfig(SetPlayerConfigRequest) returns (PlayerDglabConfig);
+  rpc AdminOverride(AdminOverrideRequest) returns (PlayerDglabConfig);
+}
+
+message SetStrengthRequest {
+  PlayerIdentifier player = 1;
+  int32 channel = 2;             // 0 = A, 1 = B
+  int32 strength = 3;            // 0..=200 per channel（10 §2.5）
+  string source = 4;             // "PLEASURE_CHANGE" | "DAMAGE_TRIGGER" | "ADMIN_OVERRIDE" | "BIOCAPITAL_REWARD" | "IDLE" | "CLIENT"（10 §3.2 + §4.3 + dglab_strength_log.trigger_source）
+  Uuid request_id = 5;
+}
+
+message SetStrengthResponse {
+  bool success = 1;
+  int32 new_strength = 2;
+  int32 max_strength_applied = 3;// 服务器 max_strength 限制（10 §4.2, 0..=200）
+}
+
+// 10 §3.2 + §3.5：玩家自设 DG_LAB 强度配置（base/max/waveform）。
+// 字段顺序：player_uuid → base → max → waveform_a → waveform_b →
+// updated_tick → has_active_override → override_expires_at。
+message PlayerDglabConfig {
+  Uuid player_uuid = 1;
+  int32 base_intensity = 2;        // 0..=200（默认 60）
+  int32 max_intensity = 3;         // 0..=200（默认 80, max >= base 由 CHECK 约束）
+  string waveform_a = 4;           // 15 种官方 id（10 §2.11）；默认 "continuous"
+  string waveform_b = 5;           // 15 种官方 id（10 §2.11）；默认 "pulse"
+  int64 updated_tick = 6;
+  bool has_active_override = 7;    // 当前是否有 OP 覆写（10 §3.4）
+  google.protobuf.Timestamp override_expires_at = 8;  // 最近的 active 覆写过期时间
+}
+
+message SetPlayerConfigRequest {
+  Uuid player_uuid = 1;
+  int32 base_intensity = 2;        // 0..=200
+  int32 max_intensity = 3;         // 0..=200, must be >= base
+  string waveform_a = 4;           // 15 种官方 id
+  string waveform_b = 5;           // 15 种官方 id
+}
+
+// 10 §3.4：OP 临时覆写。`param` 取 5 值之一：
+//   "base" | "max" | "waveform_a" | "waveform_b" | "clear"
+// 当 param=base/max → value_int (0..=200)，value_str 空；
+// 当 param=waveform_a/waveform_b → value_str (15 种官方 id)，
+//   value_int 留空；
+// 当 param=clear → 两个 value 都空（立即清除该玩家所有 active 覆写）。
+message AdminOverrideRequest {
+  Uuid target_player_uuid = 1;
+  string param = 2;                // "base" / "max" / "waveform_a" / "waveform_b" / "clear"
+  int32 value_int = 3;             // 当 param=base/max（0..=200）
+  string value_str = 4;            // 当 param=waveform_a/waveform_b（15 官方 id）
+  int32 duration_seconds = 5;      // 持续时间（秒）；0 = 立即清除
+  Uuid issued_by = 6;              // OP 玩家 UUID
+}
+
+message StrengthResponse {
+  int32 channel_a = 1;
+  int32 channel_b = 2;
+  int32 max_strength = 3;        // 当前限制值（0..=200, 10 §4.2）
+  bool player_online = 4;        // 离线时强度强制 = 0（10 §4.2）
+}
+
+message TokenRequest {
+  string token = 1;
+}
+
+// inferred from 10 §5 dglab_tokens SQL
+message TokenResponse {
+  string token = 1;              // dglab_tokens.token（UUIDv4）
+  Uuid owner_uuid = 2;           // dglab_tokens.owner_uuid
+  int64 created_tick = 3;        // dglab_tokens.created_tick
+  int64 last_used_tick = 4;      // dglab_tokens.last_used_tick
+  bool enabled = 5;              // dglab_tokens.enabled
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp last_used_at = 7;
+}
+
+message TokenListResponse {
+  repeated TokenResponse tokens = 1;
+  int32 total_count = 2;
+}
+
+// ── Audit ───────────────────────────────────
+service AuditService {
+  rpc Query(AuditQueryRequest) returns (AuditQueryResponse);
+  rpc Export(AuditExportRequest) returns (ExportResponse);
+}
+
+// inferred from 12 §2.12 + 99 §2.2 审计强制字段
+message AuditQueryRequest {
+  string table = 1;              // "audit_bank" | "audit_dglab" | "audit_admin"
+  Uuid actor_uuid = 2;           // 99 §2.2
+  string actor_type = 3;         // "PLAYER" | "ADMIN_CMD" | "RUST_SERVICE" | "HARDWARE_DGLAB"
+  Uuid target_uuid = 4;
+  string target_type = 5;        // "PLAYER" | "BANK_ACCOUNT" | "CONTRACT" | "CORE_POD"
+  string op = 6;                 // "bank.transfer" | "pod.produce" | "contract.sign" | ...
+  google.protobuf.Timestamp from = 7;
+  google.protobuf.Timestamp to   = 8;
+  int32 limit = 9;
+  int64 before_tick_millis = 10; // 翻页游标
+}
+
+message AuditQueryResponse {
+  repeated AuditRow rows = 1;
+  int64 next_before_tick_millis = 2;
+}
+
+// inferred from 99 §2.2 审计日志强制字段（actor / target / op / before / after / tick / request_id）
+message AuditRow {
+  Uuid actor_uuid = 1;
+  string actor_type = 2;         // enum-as-string
+  Uuid target_uuid = 3;
+  string target_type = 4;        // enum-as-string
+  string op = 5;                 // e.g. "bank.transfer"
+  string before_json = 6;        // 99 §2.2 before JSONB
+  string after_json = 7;         // 99 §2.2 after JSONB
+  int64 tick_millis = 8;         // 99 §2.2 tick_millis
+  Uuid request_id = 9;           // 99 §2.2 request_id
+  google.protobuf.Timestamp at = 10;
+  string notes_json = 11;        // 可选备注（audit_bank.notes JSONB）
+}
+
+message AuditExportRequest {
+  string table = 1;
+  google.protobuf.Timestamp from = 2;
+  google.protobuf.Timestamp to   = 3;
+  string format = 4;             // "csv" | "json"
+  Uuid actor_uuid = 5;
+  string op = 6;
+}
+
+message ExportResponse {
+  bytes payload = 1;
+  string content_type = 2;
+  int64 row_count = 3;
+}

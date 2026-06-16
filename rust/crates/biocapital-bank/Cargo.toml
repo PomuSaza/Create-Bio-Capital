@@ -1,0 +1,17 @@
+[package]
+name = "biocapital-bank"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Bank ledger logic per doc/08-bank.md (PRIORITY)"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+toml = "0.8"
+
+[dev-dependencies]
+proptest = { workspace = true }

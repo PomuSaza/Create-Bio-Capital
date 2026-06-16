@@ -1,0 +1,14 @@
+Placeholder for bank_card.json
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real JSON when assets are provided.
+
+Expected content for create_biocapital:item/bank_card.json
+------------------------------------------------
+Format: Minecraft model JSON (1.21.x)
+Schema: { "parent": "item/generated", "textures": { "layer0": "create_biocapital:item/bank_card" } }
+Notes:
+  - 32x32 inventory icon
+  - Renders flat (no 3D rotation in hand)
+  - Per doc/08-bank.md §3.1: stacks to 1, has OWNER_UUID DataComponent
+  - Right-click in air opens BankMenu (currently stubbed; see doc/15-web-ui.md for future Web UI)
+Replace this file with the actual JSON and remove the .txt suffix.

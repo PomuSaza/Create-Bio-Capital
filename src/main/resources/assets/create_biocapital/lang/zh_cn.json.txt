@@ -1,0 +1,33 @@
+Placeholder for zh_cn.json
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real JSON when assets are provided.
+
+Expected content for create_biocapital:lang/zh_cn.json
+------------------------------------------------
+Format: Minecraft language file JSON (1.21.x)
+Schema: { "item.create_biocapital.<name>": "中文名", "block.create_biocapital.<name>": "中文名", "fluid.create_biocapital.<name>": "中文名", ... }
+
+Keys (per doc/00-overview.md §3 译名表):
+  "item.create_biocapital.cat_grass":        "猫草"
+  "item.create_biocapital.bank_card":        "银行卡"
+  "item.create_biocapital.desire_fragment":  "欲望碎片"
+  "block.create_biocapital.core_pod":        "核心舱"
+  "block.create_biocapital.atm":             "ATM"
+  "block.create_biocapital.swamp_mud":       "沼泽泥"
+  "fluid.create_biocapital.high_tide":       "高潮流体"
+  "fluid.create_biocapital.super_lubricant": "超级润滑油"
+  "fluid.create_biocapital.charm_potion":    "媚药水体"
+  "fluid.create_biocapital.semen":           "精液"
+  "hud.create_biocapital.pleasure":          "快感值"
+  "hud.create_biocapital.hunger":            "饥饿值"
+
+  "itemGroup.create_biocapital.tab":         "生物资本"
+
+Sub-titles (optional, 5 entries):
+  - "create_biocapital.subtitle.bank_full":   "账户已满"
+  - "create_biocapital.subtitle.bind_card":   "已绑定卡片"
+  - "create_biocapital.subtitle.pod_enter":   "已进入核心舱"
+  - "create_biocapital.subtitle.pod_exit":    "已离开核心舱"
+  - "create_biocapital.subtitle.token_bind":  "硬件已绑定"
+
+Replace this file with the actual JSON and remove the .txt suffix.

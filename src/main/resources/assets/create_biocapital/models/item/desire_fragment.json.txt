@@ -1,0 +1,15 @@
+Placeholder for desire_fragment.json
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real JSON when assets are provided.
+
+Expected content for create_biocapital:item/desire_fragment.json
+------------------------------------------------
+Format: Minecraft model JSON (1.21.x)
+Schema: { "parent": "item/generated", "textures": { "layer0": "create_biocapital:item/desire_fragment" } }
+Notes:
+  - 32x32 inventory icon
+  - Renders flat (no 3D rotation in hand)
+  - Per doc/06-hostile-mobs.md: dropped by hostile variants (3% chance)
+  - Per doc/04-core-pod.md §3.2: by-product of Core Pod production
+  - Stacks to 64
+Replace this file with the actual JSON and remove the .txt suffix.

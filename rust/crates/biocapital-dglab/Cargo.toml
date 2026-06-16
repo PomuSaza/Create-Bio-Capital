@@ -1,0 +1,19 @@
+[package]
+name = "biocapital-dglab"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DG_LAB integration (direct Rust client) per doc/10-hardware-dglab.md"
+
+[dependencies]
+async-trait = { workspace = true }
+chrono = { workspace = true }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-tungstenite = "0.21"
+tracing = { workspace = true }
+uuid = { workspace = true }

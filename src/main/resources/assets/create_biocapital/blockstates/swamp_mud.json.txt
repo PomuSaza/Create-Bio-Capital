@@ -1,0 +1,13 @@
+Placeholder for swamp_mud.json
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real JSON when assets are provided.
+
+Expected content for create_biocapital:blockstates/swamp_mud.json
+------------------------------------------------
+Format: Minecraft blockstate JSON (1.21.x)
+Schema: { "variants": { "": { "model": "create_biocapital:block/swamp_mud" } } }
+Notes:
+  - Swamp Mud has no state variants (no direction, no powered, no age, no moisture)
+  - Single model referenced
+  - The "" key means "default / any state combination matches this variant"
+Replace this file with the actual JSON and remove the .txt suffix.

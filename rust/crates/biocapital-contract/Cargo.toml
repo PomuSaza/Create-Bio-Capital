@@ -1,0 +1,23 @@
+[package]
+name = "biocapital-contract"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Slave-contract logic per doc/09-contracts.md"
+
+[dependencies]
+# Path deps — domain uses bank types in `compute_payout` mapping;
+# the gRPC layer (`biocapital-grpc::contract_service`) will
+# fan out to `biocapital-bank::BankService::Transfer` for the
+# actual ledger movement (cross-crate dependency authorised by
+# task #7 / §A.3 spec).
+biocapital-bank = { path = "../biocapital-bank" }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

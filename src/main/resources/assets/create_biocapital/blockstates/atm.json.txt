@@ -1,0 +1,29 @@
+═══════════════════════════════════════════════════════════════════════════════
+PLACEHOLDER — REPLACE WITH A REAL .json BEFORE RELEASE
+═══════════════════════════════════════════════════════════════════════════════
+
+File name  : atm.json
+Real format: JSON (Minecraft blockstate file)
+Location   : assets/create_biocapital/blockstates/
+
+Per the v2 design blueprint, the ATM is a **vault-style** block, not
+a GUI block. The blockstate only encodes the FACING direction (which
+face the card slot is on).
+
+Suggested contents:
+
+{
+  "variants": {
+    "facing=north": { "model": "create_biocapital:block/atm" },
+    "facing=south": { "model": "create_biocapital:block/atm", "y": 180 },
+    "facing=west":  { "model": "create_biocapital:block/atm", "y": 270 },
+    "facing=east":  { "model": "create_biocapital:block/atm", "y": 90 }
+  }
+}
+
+The model itself should include a visible "card slot" on the FACING
+face, so the player can see where to insert the bank card.
+
+Once the file is provided, delete this .txt and place the real .json
+at the expected location.
+═══════════════════════════════════════════════════════════════════════════════

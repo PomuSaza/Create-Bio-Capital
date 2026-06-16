@@ -1,0 +1,23 @@
+Placeholder for core_pod_side.png
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real PNG when assets are provided.
+
+Expected content for create_biocapital:block/core_pod_side.png
+------------------------------------------------
+Format: 16x16 (tile) or 16xN (multi-tall for double-block) RGBA PNG
+       Minecraft texture atlas expects power-of-two; 16x16 per tile is standard
+Theme: Industrial pod with glass / fluid-pipe visible. Combine with core_pod.json.txt
+       blockstate for DOUBLE_BLOCK_HALF (LOWER + UPPER) tiling.
+Palette:
+  Pod body metal   #5A5A6A
+  Pod body accent  #3F3F4A
+  Glass green      #80FFAA (high_tide fluid visible inside)
+  Pipe copper      #B87333
+  Wire violet      #B050B0
+  Warning yellow   #FFD040
+Subject: Vertical metal pod with central glass tube showing green fluid
+Notes:
+  - LOWER half (0..16 px Y) = input + tank + footing
+  - UPPER half (16..32 px Y) = output pipe + vent + warning light
+  - Should feel "industrial" (Create style) but with bio-org accents
+Lighting: Top-left, mixed diffuse + emissive (warning light)

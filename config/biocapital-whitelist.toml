@@ -1,0 +1,24 @@
+# ─────────────────────────────────────────────────────────────
+# Create: Bio-Capital — TG 群白名单
+# 路径: <minecraft_dir>/config/biocapital-whitelist.toml
+# 权威: doc/18-tg-whitelist.md §2.1
+# 加载: Rust 端 biocapital-cli start；SIGHUP 热重载
+# ─────────────────────────────────────────────────────────────
+
+[players]
+# UUID 列表
+uuids = [
+  "069a79f4-44e9-4726-a5be-fca90e38aaf5",   # Notch
+  "f7c77d99-9f15-4a66-87e9-2b9b3a3e8c7d",   # Dinnerbone
+]
+
+# username 列表（不区分大小写；18 §2.3 查询流程）
+usernames = [
+  "jeb_",
+  "dinnerbone",
+]
+
+# 高级：按 TG 群 ID 同步（可选，留待后续）
+# [tg]
+# bot_token_env = "TG_BOT_TOKEN"
+# source_chat_id = -1001234567890

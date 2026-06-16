@@ -1,0 +1,20 @@
+Placeholder for bank_card.png
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real PNG when assets are provided.
+
+Expected content for create_biocapital:item/bank_card.png
+------------------------------------------------
+Format: 32x32 RGBA PNG (transparency supported)
+Theme: Sleek black/purple credit-card-like icon with a "+" or "B" symbol
+Palette:
+  Body dark   #1A1A2E
+  Body accent #6B2FB7
+  Chip gold   #E0B040
+  Highlight   #FFFFFF
+  Text accent #69B4FF
+Subject: A rectangular card, slightly rotated for depth, with embossed emblem
+Notes:
+  - Stacks to 1 (per doc/08-bank.md §3.1)
+  - The "+" / "B" / "$" symbol should be readable at 32x32
+  - Player UUID is stored in the OWNER_UUID DataComponent (no visual encoding needed)
+Lighting: Top-left, soft metallic

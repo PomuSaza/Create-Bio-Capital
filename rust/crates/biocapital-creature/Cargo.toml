@@ -1,0 +1,30 @@
+[package]
+name = "biocapital-creature"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Bio customization + hostile-mob replacement per doc/13-bio-customization.md + doc/06-hostile-mobs.md"
+
+[dependencies]
+async-trait = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+# `biocapital-creature::domain::creature::DropPartDevGate` re-uses
+# the 12-value BodyPart enum from `biocapital-core::player_state`.
+# This keeps the wire form (SCREAMING_SNAKE_CASE) and the PG
+# `body_part_development.part_name` CHECK constraint in lock-step.
+biocapital-core = { path = "../biocapital-core" }
+biocapital-pg = { path = "../biocapital-pg" }
+
+[dev-dependencies]
+filetime = "0.2"
+tempfile = "3"
+tokio = { workspace = true }

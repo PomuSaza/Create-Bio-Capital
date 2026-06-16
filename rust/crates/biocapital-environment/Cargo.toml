@@ -1,0 +1,31 @@
+[package]
+name = "biocapital-environment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Environment effects per doc/07-environment.md + doc/05-byproducts-fluids.md"
+
+[dependencies]
+# Path deps — task #8 wires the ENVIRONMENT-source fluid effect
+# path (07 §8 + 05 §4) into the EnvironmentService so fluid
+# immersion (e.g. entity standing in High Tide) can drive
+# PlayerState mutations through the same domain code that
+# PlayerStateService uses.
+biocapital-core = { path = "../biocapital-core" }
+# The PlayerStateRepository + PlayerStateServiceDeps live in
+# `biocapital-pg` (the workspace's central read/write path). This
+# is a one-way dep — `biocapital-pg` does NOT depend on
+# `biocapital-environment`, so no cycle.
+biocapital-pg   = { path = "../biocapital-pg" }
+
+async-trait = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }

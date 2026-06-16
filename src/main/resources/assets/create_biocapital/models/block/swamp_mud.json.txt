@@ -1,0 +1,14 @@
+Placeholder for swamp_mud.json
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real JSON when assets are provided.
+
+Expected content for create_biocapital:block/swamp_mud.json
+------------------------------------------------
+Format: Minecraft block model JSON (1.21.x)
+Schema: { "parent": "block/cube_all", "textures": { "all": "create_biocapital:block/swamp_mud" } }
+Notes:
+  - Swamp Mud block model — single texture on all 6 faces
+  - Per doc/07-environment.md §2.2: SWAMP_MUD = -2.0 hunger/tick
+  - 16x16 per face
+  - cube_all is simplest model; ok for placeholder
+Replace this file with the actual JSON and remove the .txt suffix.

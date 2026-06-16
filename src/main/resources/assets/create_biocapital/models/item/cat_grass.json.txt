@@ -1,0 +1,14 @@
+Placeholder for cat_grass.json
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real JSON when assets are provided.
+
+Expected content for create_biocapital:item/cat_grass.json
+------------------------------------------------
+Format: Minecraft model JSON (1.21.x)
+Schema: { "parent": "item/generated", "textures": { "layer0": "create_biocapital:item/cat_grass" } }
+Notes:
+  - 32x32 inventory icon
+  - Renders flat (no 3D rotation in hand)
+  - Per doc/08-bank.md §2.1: stacks to 1000, no NBT
+  - Should not suggest "stack limit" visually
+Replace this file with the actual JSON and remove the .txt suffix.

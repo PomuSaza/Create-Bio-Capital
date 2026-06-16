@@ -1,0 +1,17 @@
+[package]
+name = "biocapital-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Core data structures (PlayerState, BodyPart, etc.) per doc/02-player-state.md and doc/03-body-development.md"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+sqlx = { workspace = true }

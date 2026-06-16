@@ -1,0 +1,54 @@
+[package]
+name = "biocapital-webui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Web UI HTTP API (axum) per doc/15-web-ui.md"
+
+[dependencies]
+# Workspace deps
+tokio = { workspace = true }
+axum = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+async-trait = { workspace = true }
+
+# App-internal
+biocapital-core = { path = "../biocapital-core" }
+biocapital-bank = { path = "../biocapital-bank" }
+biocapital-contract = { path = "../biocapital-contract" }
+biocapital-pg = { path = "../biocapital-pg" }
+biocapital-dglab = { path = "../biocapital-dglab" }
+biocapital-creature = { path = "../biocapital-creature" }
+
+# HTTP-friendly UUID encoding
+hex = "0.4"
+
+# Random tokens
+rand = "0.8"
+
+# Password / token hash (HMAC-SHA256 for token verification)
+hmac = "0.12"
+sha2 = "0.10"
+subtle = "2"
+
+# CSV export
+csv = "1"
+
+# async-stream powers the SSE handler's `stream!` macro.
+# The generated stream type implements `futures_core::Stream`,
+# so the trait must be in scope where the return type is
+# spelled out (`Sse<impl Stream<Item = …>>`).
+async-stream = "0.3"
+futures-core = "0.3"
+
+# Re-export of the http crate for HeaderMap / StatusCode used in
+# auth middleware.
+http = "1"

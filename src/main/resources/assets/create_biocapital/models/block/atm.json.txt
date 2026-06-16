@@ -1,0 +1,22 @@
+Placeholder for atm.json
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real JSON when assets are provided.
+
+Expected content for create_biocapital:block/atm.json
+------------------------------------------------
+Format: Minecraft block model JSON (1.21.x)
+Schema: { "parent": "block/cube", "textures": {
+  "particle": "create_biocapital:block/atm_side",
+  "north": "create_biocapital:block/atm_side",
+  "south": "create_biocapital:block/atm_side",
+  "east":  "create_biocapital:block/atm_side",
+  "west":  "create_biocapital:block/atm_side",
+  "up":    "create_biocapital:block/atm_top",
+  "down":  "create_biocapital:block/atm_bottom"
+} }
+Notes:
+  - ATM block model — 1x1x1 cube
+  - atm_top + atm_bottom 贴图 currently not present (待补)；本占位用 atm_side 替代
+  - Per doc/08-bank.md §4: FACING face has recessed card slot (separate texture needed)
+  - 16x16 per face
+Replace this file with the actual JSON and remove the .txt suffix.

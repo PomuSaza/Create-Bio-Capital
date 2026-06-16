@@ -1,0 +1,32 @@
+═══════════════════════════════════════════════════════════════════════════════
+PLACEHOLDER — REPLACE WITH A REAL .json BEFORE RELEASE
+═══════════════════════════════════════════════════════════════════════════════
+
+File name  : core_pod.json
+Real format: JSON (Minecraft block model file)
+Location   : assets/create_biocapital/models/block/
+
+Model layout:
+  The pod is a 1×2×1 vertical column. The block is placed as a single
+  1×1×1 block; the model extends the visual up by one extra block
+  (i.e. the upper half is at y ∈ [16, 32] in the 16×32 texture canvas).
+  Use `parent: "block/orientable_with_bottom"` and supply:
+    textures: { top: "...", bottom: "...", side: "...", front: "..." }
+  or build a custom model with cuboids for the lower (y 0-16) and
+  upper (y 16-32) halves.
+
+Subject : A transparent pod tube, glass-like.
+  - Lower half: rounded glass chamber, faint purple tint
+  - Upper half: the same chamber continues, with a faint internal
+    silhouette of a humanoid figure (placeholder: a darker pill shape)
+  - Bottom face: a "control panel" strip with small light-up squares
+  - Front face: a sliding-door seam at mid-height
+
+Hint for animated version:
+  Place a `core_pod.json.mcmeta` next to the model file with
+  `{"animation": {"interpolate": true, "frametime": 4}}` and supply
+  multiple frames if you want a pulsing internal light.
+
+Once the file is provided, delete this .txt and place the real .json at
+the expected location.
+═══════════════════════════════════════════════════════════════════════════════

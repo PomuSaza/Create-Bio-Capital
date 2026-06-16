@@ -1,0 +1,22 @@
+Placeholder for swamp_mud.png
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real PNG when assets are provided.
+
+Expected content for create_biocapital:block/swamp_mud.png
+------------------------------------------------
+Format: 16x16 (tile) RGBA PNG
+Theme: Wet muddy terrain — brown/olive sludge with visible bubbles
+Palette:
+  Mud dark     #3F2A1A
+  Mud mid      #5C4030
+  Mud highlight #8A6A48
+  Bubble shine #C0E0D0
+  Water sheen  #6A7A60
+  Mould green  #4A6A40
+Subject: A mud-block top with visible bubbles and a slight water-glossy look
+Notes:
+  - Per doc/07-environment.md §2.2: SWAMP_MUD = -2.0 hunger/tick when player contacts
+  - Slows player movement (1.0x → 0.7x)
+  - Should feel "wet / sinkable / gross"
+  - Tiles like a top-down mud tile (no edge variations)
+Lighting: Top-down (sun directly above), wet specular highlights

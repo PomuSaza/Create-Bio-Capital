@@ -1,0 +1,32 @@
+[package]
+name = "biocapital-grpc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "gRPC server + client (tonic) per doc/14-rust-services.md"
+
+[dependencies]
+biocapital-bank = { path = "../biocapital-bank" }
+biocapital-contract = { path = "../biocapital-contract" }
+biocapital-core = { path = "../biocapital-core" }
+biocapital-creature = { path = "../biocapital-creature" }
+biocapital-dglab = { path = "../biocapital-dglab" }
+biocapital-environment = { path = "../biocapital-environment" }
+biocapital-pg = { path = "../biocapital-pg" }
+biocapital-pod = { path = "../biocapital-pod" }
+
+async-trait = { workspace = true }
+chrono = { workspace = true }
+prost-types = "0.14"
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

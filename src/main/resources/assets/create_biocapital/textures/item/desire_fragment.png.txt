@@ -1,0 +1,21 @@
+Placeholder for desire_fragment.png
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real PNG when assets are provided.
+
+Expected content for create_biocapital:item/desire_fragment.png
+------------------------------------------------
+Format: 32x32 RGBA PNG (transparency supported)
+Theme: A glowing magenta/pink crystalline shard
+Palette:
+  Core glow  #FF69B4
+  Mid hue    #C71585
+  Edge dark  #6A0A4A
+  Sparkle    #FFFFFF
+  Shadow     #300030
+Subject: A diamond-shaped crystal shard, tilted slightly, with inner glow
+Notes:
+  - Stacks to 64
+  - Dropped by hostile mob variants (3% default per doc/06-hostile-mobs.md)
+  - Used as bi-product of Core Pod production (doc/04-core-pod.md §3.2)
+  - Should evoke "rare drop" / "valuable byproduct"
+Lighting: Inner glow, no external lighting

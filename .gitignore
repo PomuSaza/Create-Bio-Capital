@@ -1,0 +1,13 @@
+# 编译与运行产物 (不提交)
+/build/
+/run/
+/*.jar
+
+# 文档(不提交)
+/wiki-main/
+/Documentation-main/
+/doc/
+/dglab/
+
+# Rust 编译产物
+/rust/target/

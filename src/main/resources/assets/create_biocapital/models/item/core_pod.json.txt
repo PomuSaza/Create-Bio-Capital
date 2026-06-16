@@ -1,0 +1,22 @@
+═══════════════════════════════════════════════════════════════════════════════
+PLACEHOLDER — REPLACE WITH A REAL .json BEFORE RELEASE
+═══════════════════════════════════════════════════════════════════════════════
+
+File name  : core_pod.json
+Real format: JSON (Minecraft item model file)
+Location   : assets/create_biocapital/models/item/
+
+Subject : A miniature Core Pod, 16×16 pixel item icon.
+  - Same glass-tube aesthetic as the block model, scaled down
+  - Faint purple highlight at the base (the "control panel")
+
+Suggested parent:
+  { "parent": "item/generated",
+    "textures": { "layer0": "create_biocapital:item/core_pod" } }
+
+Alternatively, if you want the 3D model in the inventory:
+  { "parent": "create_biocapital:block/core_pod" }
+
+Once the file is provided, delete this .txt and place the real .json at
+the expected location.
+═══════════════════════════════════════════════════════════════════════════════

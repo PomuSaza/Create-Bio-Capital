@@ -1,0 +1,334 @@
+# ─────────────────────────────────────────────────────────────
+# Create: Bio-Capital — Java 端配置
+# 路径: <minecraft_dir>/config/create_biocapital.toml
+# 权威: doc/11-config-system.md §1
+# 全部业务计算逻辑在 Rust 端；Java 端仅读取用于 HUD / 客户端同步等展示场景
+# ─────────────────────────────────────────────────────────────
+
+# ── HUD ────────────────────────────────────────────────
+[HUD_Display]
+showHUD = true
+showPleasureBar = true
+showHungerBar = true
+showPercentages = true
+debugHUD = false
+
+[HUD_Layout]
+hudX = 10
+hudY = -40
+barWidth = 80
+barHeight = 16
+barSpacing = 4
+
+[HUD_Colors]
+hungerColor = "#CCFFAA00"        # ARGB
+pleasureColor = "#CCFF69B4"      # ARGB
+backgroundColor = "#66333333"    # ARGB
+textColor = "#FFFFFFFF"          # ARGB
+
+# ── PlayerState（02-player-state）────────────────────────
+[PlayerState]
+# 默认值；运行时由 Rust 端 PlayerStateService 持久化为权威
+pleasure_default = 0.0
+hunger_default = 20.0
+hidden_hp_default = 20.0
+hidden_hp_min = 1.0              # 绝不降至 1 以下（02 §1.1）
+hidden_hp_max = 100.0
+max_hunger = 100.0
+stat_min = 0.0
+copyOnDeath = true               # NeoForge Attachment CloneEvent 时复制
+# 触发 defeat 的 hidden_hp 阈值（02 §3.4）
+defeat_state_threshold = 1.0
+
+[PlayerState.Sources]
+sweetBerriesAdd = 5.0
+glowBerriesSub = 5.0
+mobAttackBase = 2.0
+lavaPerTick = 0.5
+charmPotionPerTick = 0.3
+
+# ── BodyDevelopment（03-body-development）────────────────
+[BodyDevelopment]
+part_dev_default = 0.0
+part_dev_max = 100.0
+maxDev = 100.0
+feetMovementBonusPerPoint = 0.005
+chestStressBonusPerPoint = 0.01
+armsInteractionBonusPerPoint = 0.0005
+mouthEfficiencyBonusPerPoint = 0.01
+bellyMaxHungerBonusPerPoint = 0.5
+genitalPleasureRateBonusPerPoint = 0.005
+
+[BodyDevelopment.Sources]
+sweetBerriesGenitalAdd = 0.5
+highTideImmersionPerTickChest = 0.1
+highTideImmersionPerTickBelly = 0.1
+defeatEndGenitalAdd = 5.0
+defeatEndBellyAdd = 5.0
+runningPer1000BlockFeetAdd = 0.5
+handCrankPer100ArmsAdd = 0.5
+potionUsePerMouthAdd = 0.3
+bingeEatingBellyAdd = 1.0
+
+# ── CorePod（04-core-pod）───────────────────────────────
+[CorePod]
+# Create 6.0.10 蒸汽引擎对齐（04 §2.2）
+generated_rpm = 32
+generated_stress = 16
+self_stress = 0
+max_operating_rpm = 64
+endurance_max = 24000            # 20 分钟
+tank_capacity_mb = 1000          # 1 bucket
+recipe_interval_ticks = 100
+# Enter 限制条件（04 §4.2）
+hunger_threshold = 5.0
+input_fluid_mb_min = 100
+
+# 兼容字段（旧 Java 端 HUD / Create 集成读取）
+generatedRpm = 32.0
+generatedStress = 16.0
+selfStress = 0.5
+recipeIntervalTicks = 100
+tankCapacityMb = 1000
+
+[CorePod.Hosting]
+maxEnduranceTicks = 24000
+offlineDecayMultiplier = 2.0
+debuffSlowness = 2
+debuffMiningFatigue = 2
+debuffWeakness = 1
+debuffJump = -2
+
+[CorePod.Inputs]
+# 接受作为输入的流体列表（默认接受任何 create_biocapital:* 流体）
+allowedInputFluids = [
+  "create_biocapital:high_tide",
+  "create_biocapital:semen",
+  "create_biocapital:charm_potion",
+]
+
+[CorePod.Outputs]
+outputFluid = "create_biocapital:high_tide"
+outputFluidAmount = 1            # mB / cycle
+outputItem = "create_biocapital:desire_fragment"
+outputItemCount = 1
+
+# ── HostileMobReplacement（06-hostile-mobs）──────────────
+[HostileMobReplacement]
+enabled_default = true
+desire_fragment_chance_default = 0.03
+
+# 兼容字段
+enabled = true
+removeSpawnEggs = true
+whitelist = []
+blacklist = ["minecraft:ender_dragon", "minecraft:wither"]
+
+[HostileMobReplacement.Drops]
+desireFragmentDropChance = 0.03
+
+[HostileMobReplacement.SpawnEggs]
+registerVariantSpawnEggs = false
+
+# ── Environment（07-environment）─────────────────────────
+# 4 种环境默认规则（可被 PG environment_default_rules 覆盖；07 §8.3）
+[Environment]
+# 兼容字段（Java 端可能读取）
+lavaPleasurePerSecond = 10.0
+lavaAbovePleasurePerSecond = 1.0
+swampMudPleasurePerSecond = 5.0
+swampMudHungerPerSecond = 0.1
+swampMudMovementSlowdownPct = 0.5
+sandPleasurePerSecond = 0.05
+magmaBlockPleasurePerSecond = 3.0
+
+[Effect.Lava]
+pleasure_delta = 1.0
+duration_ticks = 20
+intensity_formula = "FIXED_DURATION"
+source = "FLUID_IMMERSION"
+
+[Effect.SwampMud]
+hunger_delta = -2.0
+duration_ticks = 20
+intensity_formula = "FIXED_DURATION"
+source = "BLOCK_CONTACT"
+
+[Effect.Sand]
+hunger_delta = -0.5
+duration_ticks = 72000
+intensity_formula = "FIXED_DURATION"
+source = "BLOCK_CONTACT"
+
+[Effect.MagmaBlock]
+pleasure_delta = 0.5
+duration_ticks = 20
+intensity_formula = "FIXED_DURATION"
+source = "BLOCK_CONTACT"
+
+# ── Fluids（05-byproducts-fluids）────────────────────────
+# 4 种流体的默认 effect（可被 PG fluid_effects 表覆盖）
+[Fluids]
+
+[Effect.HighTide]
+pleasure_boost = 5.0
+duration_ticks = 200
+stress_boost = 2.0
+
+[Effect.SuperLubricant]
+decorative = true                # 纯装饰（user 决策 00 §4）
+
+[Effect.CharmPotion]
+pleasure_boost = 10.0
+duration_ticks = 400
+part_dev_boost_genital = 3.0
+
+[Effect.Semen]
+part_dev_boost_genital = 1.0
+defeat_trigger_placeholder = true  # 占位
+
+# ── Bank（08-bank）──────────────────────────────────────
+[Bank]
+max_balance = 100000000
+history_size = 16
+default_banks_enabled = true
+hardware_token_max_slots = 3     # 18 §1.2 FIFO 上限
+hardware_token_expiry_days = 30  # 18 §1.2 过期
+device_id_hash_algorithm = "SHA-256-base32"
+
+# 兼容字段
+maxBalance = 100000000
+historySize = 16
+deviceLockDefaultMode = "DIMENSION_AND_IP_HASH"
+inviteCodeExpirySeconds = 600
+
+[Bank.AtmInsertRateLimit]
+perTickInsertLimit = 1
+
+# ── Contracts（09-contracts）────────────────────────────
+[Contracts]
+default_revenue_share_pct = 0.0
+redemption_cost_default = 0
+max_active_contracts_per_player = 5
+daily_tribute_scan_interval_seconds = 3600   # 1 小时扫一次
+expires_tick_default = 0                     # 0 = 永久
+
+# 兼容字段
+dailyPayoutTimeTick = 24000
+maxActiveContractsPerPlayer = 5
+defaultRedemptionCost = 10000
+
+# ── DGLAB（10-hardware-dglab）───────────────────────────
+[DGLAB]
+ws_enabled = true
+ws_host = "127.0.0.1"
+ws_port = 9999
+sync_channels = false
+hud_enabled = true
+hud_position = 0
+
+# 玩家自设默认值（10 §3.2）
+base_intensity_default = 60
+max_intensity_default = 80
+waveform_a_default = "continuous"
+waveform_b_default = "pulse"
+
+# 大伤害阈值（10 §3.3）
+damage_threshold = 5.0
+
+# 强度上限（0..=200 per channel，10 §2.5 官方权威）
+max_strength_a = 200
+max_strength_b = 200
+
+# ❌ 不再有 30 个伤害倍率字段（DGLabCraft 残留）
+
+# 兼容字段
+enabled = true
+defaultWebSocketPort = 9700
+heartbeatIntervalSeconds = 30
+maxStrength = 200
+pleasureToStrengthMultiplier = 2.0
+offlineStandbyEnabled = true
+
+# ── Commands（12-command-system）────────────────────────
+[Commands]
+stats_history_limit = 20
+bank_history_limit = 16
+contract_list_limit = 50
+audit_query_default_limit = 100
+audit_export_max_rows = 10000
+
+# ── Whitelist（18-tg-whitelist）──────────────────────────
+[Whitelist]
+reload_on_sighup = true
+hmac_required = true
+hmac_secret_file = "config/biocapital-whitelist.hmac"
+auto_create_account_on_first_bind = true
+fifo_replacement = true
+
+# ── WebUI（15-web-ui）───────────────────────────────────
+[WebUI]
+http_enabled = true
+http_host = "127.0.0.1"
+http_port = 8080
+sse_keepalive_seconds = 30
+sse_max_lagged_events = 256
+admin_token_count_max = 5
+viewer_token_expiry_days = 7
+
+# 兼容字段
+enabled = true
+defaultHttpPort = 8080
+allowedOrigins = ["http://localhost:3000"]
+sessionTimeoutMinutes = 30
+adminSessionTimeoutMinutes = 60
+
+# ── Sable（16-sable-bridge）──────────────────────────────
+[Sable]
+jni_lib_name = "biocapital_jni"
+java_library_path = "build/natives/${os}/"
+build_rust_natives_on_startup = true
+
+# ── RustServices（14-rust-services）──────────────────────
+[RustServices]
+process_management = true
+auto_restart_max = 3
+auto_restart_interval_seconds = 30
+cold_start_budget_seconds = 5
+memory_budget_mb = 512
+
+# ── PG（01 §1.1.1 PG 数据目录约定）──────────────────────
+[PG]
+data_dir = "<minecraft_dir>/biocapital/pgdata/"
+port = 5432
+username = "biocapital"
+password = "biocapital"
+database = "biocapital"
+init_if_missing = true
+migration_dir = "migrations/"   # 编译进 Rust 二进制
+connection_pool_min = 5
+connection_pool_max = 10
+heartbeat_interval_seconds = 30
+backup_schedule = "0 3 * * *"   # 每日 03:00
+backup_target_dir = "backups/biocapital/"
+backup_retention_days = 7
+
+# ── Logging（14 §6.1）───────────────────────────────────
+[Logging]
+rust_log_level = "info"
+tracing_format = "json"
+log_dir = "<minecraft_dir>/biocapital/logs/"
+log_rotation = "daily"
+log_max_size_mb = 100
+log_retention_days = 30
+
+# 兼容字段
+auditLogRetentionDays = 90
+pgBackupAt = "03:00"
+pgBackupRetentionDays = 7
+
+# ── Monitoring（14 §6.2 可选）───────────────────────────
+[Monitoring]
+prometheus_enabled = false
+prometheus_port = 9090
+metrics_interval_seconds = 15

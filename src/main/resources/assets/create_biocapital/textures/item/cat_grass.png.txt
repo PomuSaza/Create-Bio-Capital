@@ -1,0 +1,22 @@
+Placeholder for cat_grass.png
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real PNG when assets are provided.
+
+Expected content for create_biocapital:item/cat_grass.png
+------------------------------------------------
+Format: 32x32 RGBA PNG (transparency supported)
+Theme: Light green / mint-colored blade-of-grass icon
+Palette:
+  Light green  #B0E0A0
+  Mid green    #6FB860
+  Dark green   #3F8040
+  Highlight    #E0F8D0
+  Shadow       #204020
+Subject: A simple single-blade of grass, centered. Two leaves forming a "V" tip
+Notes:
+  - Stacks to 1000 (per doc/08-bank.md §2.1); icon should not suggest stack limit
+  - The "Cat Grass" / "猫草" theme: slight cat-ear-like notches on the leaf tips OK
+  - Used as universal currency icon — readability is paramount
+Lighting: Top-left (NE), soft
+
+Replace this file with the actual PNG and remove the .txt suffix.

@@ -1,0 +1,57 @@
+[package]
+name = "biocapital-jni"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "JNI bridge (Java entry point) per doc/16-sable-bridge.md"
+
+# ----------------------------------------------------------------------------
+# Crate type: cdylib is REQUIRED for JNI — produces a shared library that the
+# JVM loads via System.loadLibrary("biocapital_jni").  The `lib` type is
+# retained so the crate is also usable as a normal Rust dependency (for
+# integration tests, or when a sibling Rust binary wants to call into the
+# bridge directly).
+# ----------------------------------------------------------------------------
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Default: link against the JVM at runtime via JNI invocation API.
+# `static-jvm` would link libjvm statically (not used; documented in case
+# downstream packagers need it for distribution).
+default = []
+static-jvm = []
+
+[dependencies]
+# JNI bindings (JVM-side).  Use the official `jni` crate (same as Sable).
+jni = { version = "0.21", default-features = false }
+
+# Generated proto / gRPC stubs live in the workspace `proto` module.  We
+# expose them via `pub mod proto;` in lib.rs.
+prost = { workspace = true }
+tonic = { workspace = true }
+
+# Workspace crates used by the JNI dispatch layer (forward calls to the
+# in-process service implementations rather than the network gRPC server
+# when the JVM is co-located).
+biocapital-core  = { path = "../biocapital-core" }
+biocapital-bank  = { path = "../biocapital-bank" }
+biocapital-pod   = { path = "../biocapital-pod" }
+
+# Tokio runtime — required because the underlying service implementations
+# are async.  We run a single-threaded runtime per JNI call site to keep
+# the FFI surface simple (per doc/16 §8: "Rust natives 加载：启动时一次性
+# < 500 ms").
+tokio = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging (forwarded to Java via java.util.logging bridge in dispatch.rs)
+tracing = { workspace = true }
+
+# UUID / bytes
+uuid = { workspace = true }
+bytes = "1"

@@ -1,0 +1,98 @@
+# ─────────────────────────────────────────────────────────────
+# Create: Bio-Capital — Rust 服务进程配置
+# 路径: <minecraft_dir>/config/biocapital-server.toml
+# 权威: doc/11-config-system.md §2 + doc/14-rust-services.md
+# 加载入口: rust/crates/biocapital-cli/src/config.rs（task #14）
+# ─────────────────────────────────────────────────────────────
+
+[Server]
+bind_host = "0.0.0.0"
+bind_port = 50051                  # gRPC
+http_port = 8080                   # Web UI（15 §X）
+cold_start_budget_seconds = 5      # 14 §2.3
+memory_budget_mb = 512             # 14 §5.4
+auto_restart_max = 3               # 14 §2.2
+auto_restart_interval_seconds = 30
+
+# 兼容字段（与 11 §2.2 一致）
+bindAddress = "127.0.0.1"
+grpcPort = 50051
+websocketPort = 9700
+shutdownGracefulTimeoutSeconds = 30
+
+# ── PostgreSQL（01 §1.1.1 数据目录约定）────────────────
+[Server.PostgreSQL]
+data_dir = "<minecraft_dir>/biocapital/pgdata/"
+port = 5432
+username = "biocapital"
+password = "biocapital"
+database = "biocapital"
+init_if_missing = true
+migration_dir_embedded = true     # 编译进二进制
+connection_pool_min = 5
+connection_pool_max = 10
+
+# 兼容字段
+connectionString = "postgresql://biocapital:biocapital@localhost:5432/biocapital"
+maxConnections = 10
+minConnections = 2
+acquireTimeoutSeconds = 10
+initOnStartup = true
+heartbeatIntervalSeconds = 60
+
+# ── Backup（14 §6.1 / 01 §1.1.1 异地备份）───────────────
+[Server.Backup]
+schedule = "0 3 * * *"             # cron：每日 03:00
+target_dir = "backups/biocapital/"
+retention_days = 7
+tar_format = "gz"
+
+# 兼容字段
+enabled = true
+backupTimeOfDay = "03:00"
+backupRetentionDays = 7
+backupDestination = "../biocapital-backups"
+compressionFormat = "gzip"
+
+# ── DG_LAB（10 §6.2 / 10 §2.1）─────────────────────────
+[Server.Dglab]
+ws_host = "0.0.0.0"
+ws_port = 9999
+heartbeat_interval_seconds = 60
+session_id_length = 20
+
+# 兼容字段
+enabled = true
+reconnectMaxAttempts = 3
+reconnectIntervalSeconds = 5
+
+# ── WebUI（15 §X）───────────────────────────────────────
+[Server.WebUI]
+admin_tokens = [
+  # 64-char hex（256-bit 熵）；生产环境从环境变量读
+  "REPLACE_WITH_SECURE_TOKEN_64_CHAR_HEX_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+]
+
+# ── Logging（14 §6.1）───────────────────────────────────
+[Server.Logging]
+log_level = "info"
+log_format = "json"
+log_dir = "<minecraft_dir>/biocapital/logs/"
+log_rotation = "daily"
+log_max_size_mb = 100
+log_retention_days = 30
+
+# 兼容字段
+file = "../logs/biocapital-server.log"
+fileRotation = "daily"
+fileMaxSizeMb = 100
+fileMaxFiles = 30
+
+# ── Monitoring（14 §6.2 可选）───────────────────────────
+[Server.Monitoring]
+prometheus_enabled = false
+prometheus_port = 9090
+metrics_interval_seconds = 15
+
+# 兼容字段
+prometheusEnabled = false

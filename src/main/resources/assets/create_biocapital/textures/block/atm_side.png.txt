@@ -1,0 +1,23 @@
+Placeholder for atm_side.png
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real PNG when assets are provided.
+
+Expected content for create_biocapital:block/atm_side.png
+------------------------------------------------
+Format: 16x16 (tile) RGBA PNG
+Theme: ATM-style machine — flat front with a card slot, sides show metal
+Palette:
+  Body dark    #2A2A38
+  Body mid     #4A4A58
+  Card slot    #FFD040
+  Screen glow  #69B4FF
+  Slot well    #0F0F18
+  Accent gold  #E0B040
+Subject: Front face shows a recessed card slot (square hole) at the FACING direction.
+         Other 4 sides show plain metal panel with vent slats.
+Notes:
+  - The FACING direction has a "card slot" texture (see blockstate rotation)
+  - The 5 other faces are identical metal panel
+  - Stacks to 1 (one ATM per placement)
+  - Should feel "secure / vault-like" (per doc/08-bank.md §4)
+Lighting: Top-left, soft; card slot interior is dark

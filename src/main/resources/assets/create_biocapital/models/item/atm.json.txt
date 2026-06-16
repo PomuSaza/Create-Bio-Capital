@@ -1,0 +1,14 @@
+Placeholder for atm.json
+
+This file is a PLACEHOLDER (per doc/17 §6.1). Replace with the real JSON when assets are provided.
+
+Expected content for create_biocapital:item/atm.json
+------------------------------------------------
+Format: Minecraft model JSON (1.21.x)
+Schema: { "parent": "item/generated", "textures": { "layer0": "create_biocapital:block/atm_side" } }
+Notes:
+  - ATM block as item (used for creative inventory / silk touch / etc.)
+  - 32x32 inventory icon
+  - Per doc/08-bank.md §4: FACING-direction card slot
+  - Renders the front of the block (card slot visible)
+Replace this file with the actual JSON and remove the .txt suffix.
