@@ -3,11 +3,13 @@
 /run/
 /*.jar
 
-# 文档(不提交)
+# 文档(wiki-main / Documentation-main / dglab 不提交)
 /wiki-main/
 /Documentation-main/
-/doc/
 /dglab/
+
+# doc/ 自 2026-06-20 起纳入追踪（与代码同 repo 共同演进）
+# doc/CHANGELOG.md / doc/SYSTEM_PROMPT.md / doc/99-integration-matrix.md 是 §21 审计回路核心文件
 
 # Rust 编译产物
 /rust/target/
