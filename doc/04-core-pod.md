@@ -130,18 +130,87 @@ public final FluidTank outputTank = new FluidTank(1000);  // 1 bucket, byproduct
 - 玩家用 **Create Mechanical Drain**（抽液机）从 Core Pod **TOP** 抽流体
 - 抽出的流体（高潮流体 / 媚药水体等）进入 Create 流体管道 → 可继续精炼 / 注入其他机器
 
-**物品输出**（D12）：
+**物品输出**（D19 修正，**不**再用 Chute）：
 - 单格 `ItemStackHandler(1)`：产出 `desire_fragment`（欲望碎屑）
 - 物品输出方向与 `FACING` 相同方向
-- 玩家用 **Create Chute**（滑槽）从 Core Pod 侧面接收
-- 滑槽可连接到 **Create Depot**（条板箱）作为仓库
+- **D19 决策**：玩家用 **Create 机械手（Mechanical Arm）**从 Core Pod 任意面抽取物品
+- 物品可连接到 **Create Depot**（条板箱）作为仓库
 
-> **"模拟 Depot 提取"** 的设计：Core Pod **不**是 Depot 本身；但**配合** Create 抽液机/滑槽实现"用 Depot 提取"的体验。
+> **D19 决策核心**：
+> - **流体**：D19 任意面可输入岩浆 + 任意面可被机械手/抽液机抽取（**不**限定 TOP/DOWN）
+> - **物品**：用机械手/传送带/漏斗从任意面输入
+> - **机械手 vs 滑槽**：用**机械手**（用户原话"**机械手从核心舱中取出资源**"）
 
 **参考实现引用**：
 - Create 6.0.10 changelog `wiki-main/src/users/changelogs/6.0.0.md`："Depots can now be used as storage blocks on contraptions"
 - Create 0.3.1 changelog："Item Duplication caused by Chutes" 已修复
 - Create 0.3.1："goggle overlays for fluid tanks, spouts, item drains, and basins" —— 玩家可在 goggles UI 看到 Core Pod 的流体状态
+
+### 3.5 触手模型同步（D25 决策，2026-06-20 新增）
+
+> **用户原话**："**显示的模型是服务器同步下来的核心舱里可以动的触手**"
+> **D25 决策**：占位（mod jar 内置）+ 服务器同步（每台服务器可下发独立触手模型）
+
+**模型结构**：
+
+```
+src/main/resources/assets/create_biocapital/models/block/core_pod/
+├── core_pod_block.json              # 方块基模型（占位）
+└── core_pod_tentacle.gltf.txt       # 触手 glTF 模型占位（详细描述）
+
+src/main/resources/assets/create_biocapital/animations/block/core_pod/
+└── core_pod_tentacle.animation.json.txt  # 触手动画占位
+```
+
+**运行时路径**：
+- 玩家本地：`config/biocapital/core_pod/tentacle.{gltf,animation.json}`（可由玩家自定义）
+- 服务器下发：`config/biocapital-online/<server_id>/core_pod/tentacle.{gltf,animation.json}`（D9 决策；周期性同步）
+
+**回退链**（D13 + D25）：
+1. 服务器下发（在线时）
+2. 玩家本地（离线时）
+3. mod jar 内置占位（fallback 永不报错；缺失 → magenta missing texture + WARN）
+
+**动画**（D25）：
+- 触手空闲时缓慢摆动（idle 动画）
+- 玩家绑定时触手缠绕玩家（engage 动画）
+- 高潮 / 战败时触手剧烈摆动（climax 动画）
+- 动画通过 Geckolib 渲染（详见 `doc/17-asset-placeholders.md` §5.3 后续增）
+
+### 3.6 应力输出需玩家绑定（D19 决策核心，2026-06-20 新增）
+
+> **用户原话**："**服务器成员在tg中联系我说他的核心舱需要有一个人与其绑定来输出应力**"
+> **D19 决策**：**核心舱必须有玩家绑定**才能输出应力；**不**是自动生产。
+
+**机制**：
+
+```
+if (no_player_bound_to(pod)) {
+    pod.getGeneratedStress() = 0;  // 无绑定，无应力
+    pod.setState(STATE_IDLE);       // 触手空闲动画
+} else {
+    pod.getGeneratedStress() = base_stress;  // 16 SU（与 Create 电机对齐）
+    pod.setState(STATE_ACTIVE);     // 触手 engage 动画
+}
+```
+
+**绑定方式**：
+- 玩家右键核心舱（**不**发生位移）→ 进入 §4 托管状态
+- 玩家进入后：触手缠绕玩家模型（参见 5.1 玩家 avatar 渲染 + §3.5 触手动画）
+- 玩家离开：右键再次 → 退出托管，触手回 idle
+- 玩家离线：核心舱持续生产，**耐久消耗 ×2**（详见 §4.4 离线托管）
+
+**与"机械手/传送带输入"的关系**：
+- 玩家**不**需要绑定就能让核心舱接收岩浆等输入
+- 玩家绑定**只**影响**应力输出**（不生产 = 0 SU；生产 = 16 SU）
+- 接收岩浆/产出副产物 = 全时（玩家绑定/不绑定都行）
+
+**核心舱运行时序**：
+1. 玩家放岩浆（任意面/机械手/传送带/漏斗）→ 流体槽
+2. 玩家**右键**核心舱 → 进入托管（生产应力 16 SU）
+3. 机械手抽副产物（高潮流体/媚药水体/欲望碎屑）→ Create Depot/管道
+4. 玩家**右键**核心舱 → 退出托管（应力归 0）
+5. 玩家离线 → 仍生产（×2 耐久消耗）
 
 ---
 

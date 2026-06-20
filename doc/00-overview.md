@@ -204,6 +204,16 @@ byte buffer，Rust JNI dispatch 用 `Debug` UTF-8 占位），因此从 Java
 | 服务器配置覆盖 | 默认本地优先 | **服务器下发覆盖**（进服 + 5 min hash 检查；D15/D16/D17 决策）| 2026-06-20 |
 | 服务器 vs 玩家配置 | 单一目录 | **双目录**：玩家本地 `config/biocapital/` + 服务器下发 `config/biocapital-online/<server_id>/`（不污染本地）| 2026-06-20 |
 | 资源周期性同步 | 仅启动期加载 | **周期性同步**（玩家进服 + 5 min 间隔，hash 检查后增量；D9 决策）| 2026-06-20 |
+| Web UI dashboard 架构 | 简单查询后台 | **双向 dashboard**（D18 决策）：服务器管理员视图 / 玩家视图；与 MC 客户端**实时 WebSocket 双向**；三种部署模式（服务端/玩家本地/第三方）| 2026-06-20 |
+| 战败放弃物品分支 | 清除所有物品 | **清 inventory（不动 armor slot）+ 不动任何 buff**（D20 决策，与猫草分支的关键区分）| 2026-06-20 |
+| 进服前校验 | 不校验 | **2 种硬拦**（D21 决策）：① 玩家未同步 server config；② 玩家环境不兼容（mod 不匹配/缺失）| 2026-06-20 |
+| 12 部位 → 增益 | N/A | **D23 决策**：12 部位对应 12 种增益（足部=速度/胳膊=力量/胸=防御等）；GENITAL 敏感度（隐性不提醒加成）| 2026-06-20 |
+| 部位开发度调节 | 仅增长 | **可降**（D24 决策）：Web UI 支付猫草降低部位开发度（双向）| 2026-06-20 |
+| 核心舱交互 | 任意自动生产 | **必须有玩家绑定**才能输出应力（19 SU）；机械手/传送带/漏斗从任意面输入输出（任意面）| 2026-06-20 |
+| 核心舱触手模型 | N/A | **占位 + 服务器同步**（D25 决策）：mod jar 内置占位 + 服主可下发独立触手模型 + 动画（idle / engage / climax）| 2026-06-20 |
+| 奴隶契约 | 物品 + writable book | **仅 Web UI 创建**（D26 决策）：契约方在 webui 填参数 + target_player 右键"签约"；不走 Minecraft 物品合成| 2026-06-20 |
+| ATM 物理交互 | 通用物品交互 | **正面物品框 + 银行卡** + **其他 5 面机械手/传送带/漏斗**（D27 决策）| 2026-06-20 |
+| 高潮机制 | N/A | **触达阈值后满快感 + 1 秒衰减 + 部位开发度 1%**（D28 决策）| 2026-06-20 |
 
 ---
 
@@ -242,6 +252,7 @@ byte buffer，Rust JNI dispatch 用 `Debug` UTF-8 占位），因此从 Java
 | `17-asset-placeholders.md` | 资源占位文件策略 |
 | `18-tg-whitelist.md` | TG 群白名单 |
 | `19-dev-process.md` | **MVP 优先工作纪律**（2026-06-20 新增；D14 决策）|
+| `20-web-ui-dashboard.md` | **Web UI Dashboard 完整规格**（D18 决策：双视图 + 部署模式 + WebSocket + 给 Web UI Agent 的单独文档）|
 | `99-integration-matrix.md` | 模块依赖矩阵与变更影响 |
 | `SYSTEM_PROMPT.md` | agent 驱动入口（多 agent 编排器规则） |
 | `assets/creatures/_template/` | 生物自定义模板（占位文件） |

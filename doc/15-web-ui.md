@@ -1,6 +1,15 @@
 ---
 module: 15-web-ui
-status: canonical — SEPARATE module
+status: canonical — SEPARATE module (摘要 + 路由)
+audience: backend / doc 维护者
+last_reviewed: 2026-06-20
+depends_on: 00-overview, 20-web-ui-dashboard
+---
+
+> **2026-06-20 修订（D18 决策）**：本文件**仅**保留**路由表**与**Rust 后端 API 契约**。
+> **Web UI Dashboard 的完整规格**（双视图 / 部署模式 / WebSocket / 实时双向通信 / 鉴权 / 给 Web UI Agent 的提示）→ **`doc/20-web-ui-dashboard.md`**。
+>
+> **Web UI Agent 起步必读**：`doc/20-web-ui-dashboard.md`（**先**读这个）+ 本文件（路由表）。
 audience: web-ui-developers
 last_reviewed: 2026-06-14
 depends_on: 00-overview, 01-cross-cutting-concerns, 08-bank, 09-contracts, 10-hardware-dglab, 12-command-system, 14-rust-services
@@ -41,12 +50,18 @@ depends_on: 00-overview, 01-cross-cutting-concerns, 08-bank, 09-contracts, 10-ha
 | 图表 | Recharts |
 | HTTP | fetch + zod 校验 |
 | 后端协议 | **直连 Rust HTTP + SSE**（**不经 DG_LAB 任何东西**）|
+| Dashboard 部署 | **三种模式**：服务端 / 玩家本地 / 第三方（详见 `doc/20-web-ui-dashboard.md` §2）|
+| 双视图 | 服务器管理员视图（OP 权限 ≥ 3）/ 玩家视图（viewer token）|
+| 双向通信 | **D22 决策**：Web UI 同时连 **Rust server**（gRPC/HTTP/SSE）+ **MC 客户端**（WS server，mod 提供）|
 
-> **2026-06-20 D6 决策**：Web UI **不**连 DG_LAB 任何东西，**不**控制硬件。
-> DG_LAB 控制**完全在 Minecraft 客户端**（详见 `doc/10-hardware-dglab.md` §2.1）。
-> Web UI 的 `/devices` 路由只**显示**玩家当前连接的 DG_LAB 设备状态（查询 Rust 镜像数据），**不**发送控制指令。
+> **2026-06-20 D6 + D18 + D22 决策**：
+> - Web UI **不**连 DG_LAB 任何东西，**不**控制硬件。
+> - DG_LAB 控制**完全在 Minecraft 客户端**（详见 `doc/10-hardware-dglab.md` §2.1）。
+> - **DG_LAB QR 码由 Web UI 生成**（**不**是 MC 客户端 GUI；D18）。
+> - Web UI ↔ MC 客户端通过 **WebSocket** 双向通信（D22 方案 A）。
 
 > **当前迭代**：仅实现数据契约 + 路由表；具体 React 组件待开发。
+> **Web UI Agent 起步**：见 [`doc/20-web-ui-dashboard.md` §7](20-web-ui-dashboard.md)。
 
 ---
 

@@ -861,6 +861,7 @@ MVP 范围（必做）：<bullet list>
 | `doc/08-bank.md` ⭐ | 银行（PRIORITY）|
 | `doc/14-rust-services.md` ⭐ | Rust 服务（PRIORITY）|
 | `doc/19-dev-process.md` | **MVP 优先工作纪律**（2026-06-20 新增）|
+| `doc/20-web-ui-dashboard.md` | **Web UI Dashboard 完整规格**（D18 决策：双视图 + 部署模式 + WebSocket + Web UI Agent 单独文档）|
 | `doc/99-integration-matrix.md` | 联动矩阵（变更必查必改）|
 | `doc/CHANGELOG.md` | 完整变更与诚实完成度 |
 | `wiki/JavaAudit.md` | Java 端审计（2026-06-18）|

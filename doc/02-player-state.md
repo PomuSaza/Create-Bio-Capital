@@ -144,18 +144,26 @@ if (livingEntity.getHealth() <= 0.0F) {
 
 **恢复选项**（D4：**两个选项并发弹出**，玩家点哪个走哪个）：
 
-| 选项 | 行为 | 资源消耗 |
-|---|---|---|
-| **放弃物品回床** | 清除玩家身上所有物品 + 传送到 `respawnPos`（床/出生点）| 0 |
-| **用猫草恢复** | HP 回满 + 清全部 **debuff** + 饱食度回满 + 快感值清零 | **N 单位猫草**（`[Recovery] cat_grass_cost`，**可配置**，默认 50）|
+| 选项 | 行为 | 资源消耗 | buff 影响 |
+|---|---|---|---|
+| **放弃物品回床**（D20）| 清空 `inventory`（**不**动 armor slot 服装饰品）+ 传送到 `respawnPos`（床/出生点）| 0 | **不**动任何 buff（保留正向 + debuff）|
+| **用猫草恢复** | HP 回满 + 清全部 **debuff** + 饱食度回满 + 快感值清零 | **N 单位猫草**（`[Recovery] cat_grass_cost`，**可配置**，默认 50）| **清**全部 debuff；**保留**正向 buff |
 
-**关键约束**（D4/D5 用户原话）：
+**关键约束**（D4/D5/D20 用户原话）：
 - 部位开发度**不**变（D5："**开发度不要给变啊**"）
 - 战败后**不**走原版死亡路径，**不**生成死亡消息
 - `low_hp_hits++`（每次战败 +1）
 - 玩家选完选项 → `defeated=false` → UI 遮罩层消失
+- **D20 关键区分**：
+  - **放弃物品**分支：**不**动 buff，**只**清 inventory（armor 槽保留）
+  - **猫草**分支：**清** debuff，**保留** armor 槽（全身装备）
+- **D3 战败期间玩家能正常操作**（移动、视角旋转、点击按钮）；**不能**攻击、放置方块、使用物品（`isClientSide` check）
 
 **反向 buff**（D5："**正向的不要管**"）：战败恢复时**不**清除正向 buff（如移动加速、抗性提升）；只清 debuff。
+
+**余额不足分支**（D21 + 用户原话"猫草不足提示"）：
+- 玩家点"用猫草恢复"时若 `cat_grass < cat_grass_cost` → **按钮无效果 + 弹提示 "猫草不足"**（占位资源不够）
+- 不影响"放弃物品"分支（不要猫草）
 
 ### 3.5 living effect 触发（D8 决策）
 
@@ -279,3 +287,93 @@ service PlayerStateService {
     rpc ListLivingEffects(ListLivingEffectsRequest) returns (ListLivingEffectsResponse);
 }
 ```
+
+### 7.7 12 部位开发度 → 增益映射（D23 决策，2026-06-20 新增）
+
+> **D23 决策**：每个 BodyPart 对应**一种**增益（如足部=速度、胳膊=力量）。
+> **合并规则**：多个部位影响同一属性（如 LEFT_LEG + RIGHT_LEG + FEET 都影响移动速度）→ 加和后 cap（cap 100%）。
+
+| BodyPart | 增益 | 公式（part_dev ∈ [0.0, 1.0]）|
+|---|---|---|
+| `HEAD` | 视野/感知范围 | `view_distance += part_dev * 20%`（可配置 cap 50%）|
+| `NECK` | 呼吸/水下时间 | `air_supply += part_dev * 50%` |
+| `CHEST` | 防御/抗性 | `armor_toughness += part_dev * 4` |
+| `BELLY` | 饱食度效率/消化 | `hunger_decay_rate -= part_dev * 30%` |
+| `GENITAL` | **快感值敏感度** | `pleasure_gain_multiplier += part_dev * 100%`（双刃剑）|
+| `BUTT` | 坐骑/船速 | `mounted_speed += part_dev * 30%` |
+| `BACK` | 背包容量/负重 | `inventory_slots += part_dev * 9`（最多 +9 槽）|
+| `LEFT_ARM` | 左手攻击/挖掘 | `left_hand_damage += part_dev * 30%` |
+| `RIGHT_ARM` | 右手攻击/挖掘 | `right_hand_damage += part_dev * 30%` |
+| `LEFT_LEG` | 移动速度 | `speed += part_dev * 10%` |
+| `RIGHT_LEG` | 移动速度 | `speed += part_dev * 10%` |
+| `FEET` | 移动速度 / 摔落抗性 | `speed += part_dev * 10%` + `fall_damage_reduction += part_dev * 30%` |
+
+> **MVP 起步**：仅 3 个部位（GENITAL/FEET/LEFT_ARM）有完整公式；其他部位**仅**记录 part_dev 数值，buff 计算**留后续增**。
+
+**敏感度机制**（D23 衍生）：
+- `GENITAL part_dev` 越高 → 受攻击时 `pleasure` 上涨**越快**（"受怪物影响时快感值上涨的更快"）
+- 这是**隐性不提醒**的加成（玩家"觉得是一件好事"但隐藏副作用）
+- 与 §7.5 的 `estrus` living effect 联动：GENITAL 高的玩家更容易被 `estrus` 触发
+
+### 7.8 部位开发度自助降低（D24 决策，2026-06-20 新增）
+
+> **D24 决策**：玩家可通过 Web UI 用猫草**降低**部位开发度（**可增长可降**，双向）。
+> **用户原话**："**webui中通过支付猫草来降低了我不喜欢的腹部敏感度**"。
+
+**机制**：
+
+- Web UI 提供"部位调整"页面（每部位独立）
+- 玩家支付 `N 单位猫草`（**可配置**，默认公式 `cat_grass_cost = part_dev * 100 + 50`）→ 该部位 `part_dev -= 0.1`（10%）
+- **下限**：`part_dev >= 0.0`（不能降为负）
+- **审计**：每次降低操作记入 `audit_bank` 表（op = `part_dev.lower`）
+- **回滚机制**：若服务器下发 + 玩家本地 part_dev 不一致 → 玩家进服时取**最大**（保守策略，不丢失增长）
+
+**Rust gRPC**：
+
+```
+service PartDevService {
+    rpc GetPartDev(PartDevQuery) returns (PartDevResponse);
+    rpc LowerPartDev(LowerPartDevRequest) returns (LowerPartDevResponse);
+    // Note: 玩家不能 IncreasePartDev（仅通过工业生产自动增长）
+}
+```
+
+### 7.9 高潮机制（D28 决策，2026-06-20 新增）
+
+> **D28 决策**："先简单：触达阈值后满快感 + 1 秒衰减 + 部位开发度 1% + 上限 100%"
+
+**触发条件**：`pleasure >= 100.0`（阈值，可配）
+
+**触发后行为**：
+
+```
+1. pleasure 立即清 0
+2. part_dev 全 12 部位 +0.01（即 +1%，可配）
+3. 全身"性感" buff 临时满 100（可视化反馈）
+4. 1 秒后衰减回实际值（基于 GENITAL part_dev）
+5. 高潮次数 +1（玩家生涯统计）
+```
+
+**上限**：
+- part_dev 上限 1.0（100%）
+- 高潮次数无上限
+
+**敏感度耦合**（D23 衍生）：
+- GENITAL part_dev 越高 → pleasure 上涨越快（**双向**：玩家觉得"快"是好是坏？）
+- 与 living effect `pleasure_overload` 联动：高潮阈值可在 Web UI 调整（默认 100.0）
+
+**Rust gRPC**：
+
+```
+service ClimaxService {
+    rpc TriggerClimax(ClimaxRequest) returns (ClimaxResponse);
+    rpc GetClimaxHistory(ClimaxHistoryQuery) returns (ClimaxHistoryResponse);
+}
+```
+
+**事件**：
+
+| 事件 | 触发时机 | 用途 |
+|---|---|---|
+| `BiocapitalClimaxEvent` | pleasure >= 阈值 | 触发全身 buff / part_dev 增长 / 客户端特效 |
+| `BiocapitalClimaxCooldownEvent` | 1 秒衰减后 | 客户端清理视觉反馈 |
