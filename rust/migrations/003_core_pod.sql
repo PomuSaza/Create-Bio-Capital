@@ -12,7 +12,7 @@
 -- through Sable — the in-process direct call itself does not write
 -- here, see doc/16-sable-bridge.md §3.4).
 
-CREATE TABLE core_pods (
+CREATE TABLE IF NOT EXISTS core_pods (
   world_uuid        UUID         NOT NULL,
   dimension         VARCHAR(64)  NOT NULL,
   pos_x             BIGINT       NOT NULL,
@@ -33,16 +33,16 @@ CREATE TABLE core_pods (
 );
 
 -- Index: "find all pods the player is currently hosting".
-CREATE INDEX idx_core_pods_host
+CREATE INDEX IF NOT EXISTS idx_core_pods_host
   ON core_pods(host_uuid)
   WHERE host_uuid IS NOT NULL;
 
 -- Index: "find the most-recently-updated pods in a chunk" (chunk
 -- re-save strategy — see 04 §7 性能影响).
-CREATE INDEX idx_core_pods_updated
+CREATE INDEX IF NOT EXISTS idx_core_pods_updated
   ON core_pods(updated_tick DESC);
 
-CREATE TABLE audit_core_pod (
+CREATE TABLE IF NOT EXISTS audit_core_pod (
   log_id                       UUID         PRIMARY KEY,
   actor_uuid                   UUID         NOT NULL,
   actor_type                   VARCHAR(16)  NOT NULL
@@ -75,7 +75,7 @@ CREATE TABLE audit_core_pod (
 
 -- Index: per-pod recent history (powers the KubeJS onCorePodProduce
 -- replay timeline — 04 §8).
-CREATE INDEX idx_audit_core_pod_target_time
+CREATE INDEX IF NOT EXISTS idx_audit_core_pod_target_time
   ON audit_core_pod(
     target_pod_world_uuid,
     target_pod_dimension,
@@ -86,5 +86,5 @@ CREATE INDEX idx_audit_core_pod_target_time
   );
 
 -- Index: op-typed scans (audit replay / heatmap dashboards).
-CREATE INDEX idx_audit_core_pod_op_time
+CREATE INDEX IF NOT EXISTS idx_audit_core_pod_op_time
   ON audit_core_pod(op, tick_millis DESC);

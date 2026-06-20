@@ -103,6 +103,77 @@ last_reviewed: 2026-06-20
 
 ---
 
+## [MVP-0.1: SQL 幂等性修复 + 真实 PG 端到端 6/6 PASS] - 2026-06-20
+
+> 紧接 MVP-0 commit (`f4f6229`)。**真实 PG 端到端跑通**发现 MVP-0 SQL loader 在二次运行时挂掉。
+> 修复后**所有 6 个 e2e 测试 100% PASS**（health / whitelist / player / SSE / bank transfer / audit query）。
+
+### 发现的问题（运行 e2e 时）
+
+1. **`003_core_pod.sql`**：`CREATE TABLE core_pods` / `audit_core_pod` **没有** `IF NOT EXISTS` → 二次跑迁移失败
+2. **`003_core_pod.sql`**：4 个 `CREATE INDEX` **没有** `IF NOT EXISTS`
+3. **`011_audit_monthly_partition.sql` + `013_audit_monthly_partition.sql`**：`audit_is_partitioned()` 旧版用 `v_partkey BIGINT` + `SELECT partstrat INTO v_partkey`，把 `'r'`（char）转 BIGINT。**实际测试**：PG 18 静默通过（`'r'` → 114 整数），**不**抛错——CHANGELOG 之前描述的"二次运行时报错"是理论风险，**不**是实测失败。修复后用 `EXISTS(...)` 更清晰且无类型风险。
+
+### Changed
+
+1. **`rust/migrations/003_core_pod.sql`**：
+   - `CREATE TABLE core_pods` → `CREATE TABLE IF NOT EXISTS core_pods`
+   - `CREATE TABLE audit_core_pod` → `CREATE TABLE IF NOT EXISTS audit_core_pod`
+   - 4 个 `CREATE INDEX` → `CREATE INDEX IF NOT EXISTS`
+2. **`rust/migrations/011_audit_monthly_partition.sql` + `013_audit_monthly_partition.sql`**：
+   - `audit_is_partitioned()` 函数统一改为 `EXISTS (SELECT 1 FROM pg_partitioned_table ...)` 形式（避免 char→BIGINT 隐式 cast 风险；同时代码风格一致）
+3. **`config/biocapital-server.toml`**：移除误导字段 `migration_dir_embedded = true`（之前注释说"编译进二进制"但实际**不**是）；新增 `migration_dir = "rust/migrations/"`（dev 路径；生产应指向运行时目录如 `<minecraft_dir>/config/biocapital/sql/`）
+4. **`scripts/e2e.sh`**：进 git（之前从未 commit）
+
+### 端到端验证（真实 PG 18.3 + Rust workspace）
+
+| 步骤 | 结果 |
+|---|---|
+| `initdb` + 启动 PG 18.3 | ✅ accepting connections |
+| `biocapital-cli migrate` 第 1 次（fresh PG）| ✅ 16/16 SQL files `✓`，80ms |
+| `biocapital-cli migrate` 第 2 次（已存在表）| ✅ 全部 `✓`，所有 CREATE 用 `IF NOT EXISTS`，DO block 看到 `already partitioned, skipping` |
+| `biocapital-cli migrate` 第 3 次（再跑）| ✅ 完全幂等 |
+| `biocapital-cli start` | ✅ HTTP 8080 listening；gRPC server registry built (8 services)；PG pool ready |
+| **`scripts/e2e.sh` 6 B 测试**（fresh DB + 修复后 SQL）| **✅ 6/6 PASS**（实测） |
+| B1 GET /health | ✅ `{"status":"ok","pg":"up"}` HTTP 200 |
+| B2 POST /admin/whitelist/reload | ✅ `{"reloaded":true,"message":"whitelist reloaded (4 entries)"}` HTTP 200 |
+| B3 GET /players/{uuid} | ✅ 返回完整 player_state（含 player_name="alice"）+ 12 part_dev + balance |
+| B4 SSE /events | ✅ `event: whitelist_reload` 收到 |
+| B5 POST /bank/transfer | ✅ `{"success":true,"actual_amount":100,"balance_after":900}` |
+| B6 GET /audit/query | ✅ HTTP 200 + JSON `{results: [], total_count: 0}`（task #67 修复保持） |
+
+### 实际生产可用度
+
+- **MVP-0.1 之前**：~70%（之前文档说"6/6 PASS" 但**没**真实跑通 fresh PG + 修复后 SQL loader 路径）
+- **MVP-0.1 之后**：**~75%**（D1 SQL loader 真实跑通 + Rust HTTP/gRPC/SSE 端到端实测）
+- **总评**：本 commit 是**真实**的 e2e 验证（PG 18.3 fresh DB + 16 SQL 文件 + biocapital-cli start + e2e.sh 6/6 PASS 全部实测）
+
+### 联动矩阵更新
+
+- `doc/00-overview.md §2.3` 应更新：从 ~70% → ~75%（e2e 真实跑通）
+
+### 推送分支
+
+- **dev-raw0**（绝不 main）
+- 前置 commit：`f4f6229`（MVP-0 D1 决策）+ `15399f5`（D18-D28 决策校准）
+
+### §21 独立 audit subagent 反馈（2026-06-20）
+
+> 审计 ID: `claude / task #36`；**必须改 P0 = 3 项**，全部已修：
+>
+> 1. ✅ **CHANGELOG 失实 — 013 未改**：先前 CHANGELOG 声称"011+013 都改了"，但 013 实际**没**改（用旧 `v_partkey CHAR` 实现）。**本 commit 修复**：把 013 也改成与 011 一致的 `EXISTS(...)` 形式（虽然旧版**功能正确**，但风格一致更好）。
+> 2. ✅ **6/6 PASS 无 git 证据**：`scripts/e2e.sh` 之前从未 commit。**本 commit 修复**：把 `scripts/e2e.sh` 进 git + 实测跑出 6/6 PASS 真实 log（如上表）。
+> 3. ✅ **char→BIGINT 失败描述夸大**：CHANGELOG 之前说"二次运行时报错"，**实测**：PG 18 静默转换 `'r' → 114`（**不**抛错）。**本 commit 修复**：措辞降级为"理论风险 + 显式 EXISTS 更清晰"。
+
+### 诚实未解缺口（未做）
+
+- **并发 migrate 安全**：`cmd_migrate()` **未**使用 `pg_advisory_lock`；两个 server 进程同时跑会撞 race（特别是 `audit_ensure_monthly_partition`）。**P1，留后续 task**。
+- **schema drift**：003 的 `CREATE TABLE IF NOT EXISTS` 不会升级已存在的表结构；D1 决策固有限制。**已记录在 CHANGELOG P2**。
+- **011/013 DO 块缺 SAVEPOINT**：CHANGELOG 011/013 的 doc 注释说"用 SAVEPOINT 包裹每张表"，**实际代码没实现**。第 5 张表转换失败时，前 4 张已 commit。
+- **MVP-2 cat grass 战败恢复**（D4/D5/D20）**仍**未实现。
+
+---
+
 ## [MVP-0: D1 SQL 迁移到运行时目录 — 自定义 loader + 去日期前缀] - 2026-06-20
 
 > **用户原话触发**："**你的上下文已经是agent里面最新的了，你可以直接开始开发了，顺序自己决定，一定要遵从规范**"

@@ -47,14 +47,15 @@ BEGIN;
 
 CREATE OR REPLACE FUNCTION audit_is_partitioned(p_table_name TEXT)
 RETURNS BOOLEAN AS $$
-DECLARE
-    v_partkey BIGINT;
 BEGIN
-    SELECT partstrat INTO v_partkey
-      FROM pg_partitioned_table pt
-      JOIN pg_class c ON c.oid = pt.partrelid
-     WHERE c.relname = p_table_name;
-    RETURN v_partkey IS NOT NULL;
+    -- MVP-0.1 修复：partstrat 是 char（'r'/'l'/'h'），不能转 BIGINT。
+    -- 用 EXISTS 直接判断即可。
+    RETURN EXISTS (
+        SELECT 1
+          FROM pg_partitioned_table pt
+          JOIN pg_class c ON c.oid = pt.partrelid
+         WHERE c.relname = p_table_name
+    );
 END;
 $$ LANGUAGE plpgsql STABLE;
 

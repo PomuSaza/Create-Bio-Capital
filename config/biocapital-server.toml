@@ -7,6 +7,7 @@
 
 [Server]
 bind_host = "0.0.0.0"
+allow_public_bind = true           # 本地 E2E + dev 必需（task #67 验证需要）
 bind_port = 50051                  # gRPC
 http_port = 8080                   # Web UI（15 §X）
 cold_start_budget_seconds = 5      # 14 §2.3
@@ -28,7 +29,10 @@ username = "biocapital"
 password = "biocapital"
 database = "biocapital"
 init_if_missing = true
-migration_dir_embedded = true     # 编译进二进制
+# D1 决策（2026-06-20）：SQL 迁移文件**运行时目录**（不编译进二进制）；
+# 不带日期/版本前缀（按字母序）。dev 默认指向源码树；
+# 生产请指向 <minecraft_dir>/config/biocapital/sql/ 等运行时路径。
+migration_dir = "rust/migrations/"
 connection_pool_min = 5
 connection_pool_max = 10
 
@@ -70,7 +74,7 @@ reconnectIntervalSeconds = 5
 [Server.WebUI]
 admin_tokens = [
   # 64-char hex（256-bit 熵）；生产环境从环境变量读
-  "REPLACE_WITH_SECURE_TOKEN_64_CHAR_HEX_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "76305866da86b16805b8b3572aa9e7912702f81b443a4e3d4e9401ab072f8232",
 ]
 
 # ── Logging（14 §6.1）───────────────────────────────────

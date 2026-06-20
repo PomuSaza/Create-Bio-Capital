@@ -33,14 +33,15 @@ BEGIN;
 
 CREATE OR REPLACE FUNCTION audit_is_partitioned(p_table_name TEXT)
 RETURNS BOOLEAN AS $$
-DECLARE
-    v_partkey CHAR;
 BEGIN
-    SELECT partstrat INTO v_partkey
-      FROM pg_partitioned_table pt
-      JOIN pg_class c ON c.oid = pt.partrelid
-     WHERE c.relname = p_table_name;
-    RETURN v_partkey IS NOT NULL;
+    -- MVP-0.1 重写（与 011 一致）：用 EXISTS 避免 char→BIGINT 隐式 cast 风险。
+    -- PG 18 实际上把 'r' 转成 114 静默通过，但显式 EXISTS 更清晰且不限 schema 类型。
+    RETURN EXISTS (
+        SELECT 1
+          FROM pg_partitioned_table pt
+          JOIN pg_class c ON c.oid = pt.partrelid
+         WHERE c.relname = p_table_name
+    );
 END;
 $$ LANGUAGE plpgsql STABLE;
 
