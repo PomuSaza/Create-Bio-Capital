@@ -132,9 +132,34 @@ pub struct PostgresSection {
     pub password: String,
     pub database: String,
     pub init_if_missing: bool,
-    pub migration_dir_embedded: bool,
+    /// SQL 迁移目录（**运行时**目录，非源码树）。D1 决策：用户可查 / 改 / 实时更新。
+    /// 可选；`None` 时按 [`resolve_migration_dir`] 默认 = `<data_dir>/../sql/`
+    /// （与 pgdata 同级，例如 `<minecraft_dir>/biocapital/sql/`）。
+    /// 详见 `doc/01-cross-cutting-concerns.md` §1.1.1（D1 决策）。
+    #[serde(default)]
+    pub migration_dir: Option<String>,
     pub connection_pool_min: u32,
     pub connection_pool_max: u32,
+}
+
+impl PostgresSection {
+    /// 解析实际的迁移目录（D1 决策）：
+    /// - `migration_dir` 显式设置 → 用作绝对路径或相对于 cwd 的路径
+    /// - `None` → 默认 = `<data_dir>/../sql/`（与 pgdata 同级，例如
+    ///   `<minecraft_dir>/biocapital/sql/`）。如果解析失败，返回 data_dir 同级 `sql/`。
+    pub fn resolve_migration_dir(&self) -> std::path::PathBuf {
+        if let Some(p) = &self.migration_dir {
+            let pb = std::path::PathBuf::from(p);
+            if pb.is_absolute() || p.starts_with('.') || p.starts_with('/') {
+                return pb;
+            }
+            return std::path::PathBuf::from(".").join(pb);
+        }
+        // 默认 = data_dir 父目录 + "sql"
+        let data_pb = std::path::PathBuf::from(&self.data_dir);
+        let parent = data_pb.parent().unwrap_or(&data_pb);
+        parent.join("sql")
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -151,6 +176,16 @@ pub struct DglabSection {
     pub ws_port: u16,
     pub heartbeat_interval_seconds: u64,
     pub session_id_length: usize,
+    /// 通道 A 强度上限（0..=200；doc/10 §2.5）
+    #[serde(default = "default_max_strength")]
+    pub max_strength_a: i32,
+    /// 通道 B 强度上限（0..=200；doc/10 §2.5）
+    #[serde(default = "default_max_strength")]
+    pub max_strength_b: i32,
+}
+
+fn default_max_strength() -> i32 {
+    200
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -273,8 +308,17 @@ impl ServerConfig {
         if self.server.dglab.ws_port == 0 {
             return Err(ConfigError::InvalidPort(self.server.dglab.ws_port));
         }
-        // 强度上限校验（10 §2.5；强度在 player_dglab_config 而非 server.toml；
-        // 但若 [Server.Dglab] 暴露 max_strength_* 则一并校验，留给后续任务）
+        // 强度上限校验（10 §2.5；范围 0..=200）
+        if !(0..=200).contains(&self.server.dglab.max_strength_a) {
+            return Err(ConfigError::InvalidMaxStrengthA(
+                self.server.dglab.max_strength_a,
+            ));
+        }
+        if !(0..=200).contains(&self.server.dglab.max_strength_b) {
+            return Err(ConfigError::InvalidMaxStrengthB(
+                self.server.dglab.max_strength_b,
+            ));
+        }
         if self.server.dglab.session_id_length < 16 || self.server.dglab.session_id_length > 64 {
             return Err(ConfigError::InvalidBindHost(format!(
                 "session_id_length {} out of range 16..=64",
@@ -376,7 +420,6 @@ username = "biocapital"
 password = "biocapital"
 database = "biocapital"
 init_if_missing = true
-migration_dir_embedded = true
 connection_pool_min = 5
 connection_pool_max = 10
 
@@ -498,5 +541,54 @@ metrics_interval_seconds = 15
         let p = PathBuf::from("/tmp/definitely-does-not-exist-biocapital.toml");
         let err = ServerConfig::load_from(&p).unwrap_err();
         matches!(err, ConfigError::NotFound(_));
+    }
+
+    #[test]
+    fn max_strength_a_over_200_rejected() {
+        let mut s = MINIMAL_OK.to_string();
+        s = s.replace(
+            "session_id_length = 20",
+            "session_id_length = 20\nmax_strength_a = 201",
+        );
+        let p = write_temp(&s);
+        let err = ServerConfig::load_from(&p).unwrap_err();
+        matches!(err, ConfigError::InvalidMaxStrengthA(201));
+    }
+
+    #[test]
+    fn max_strength_b_over_200_rejected() {
+        let mut s = MINIMAL_OK.to_string();
+        s = s.replace(
+            "session_id_length = 20",
+            "session_id_length = 20\nmax_strength_b = 300",
+        );
+        let p = write_temp(&s);
+        let err = ServerConfig::load_from(&p).unwrap_err();
+        matches!(err, ConfigError::InvalidMaxStrengthB(300));
+    }
+
+    #[test]
+    fn max_strength_a_at_200_accepted() {
+        let mut s = MINIMAL_OK.to_string();
+        s = s.replace(
+            "session_id_length = 20",
+            "session_id_length = 20\nmax_strength_a = 200\nmax_strength_b = 0",
+        );
+        let p = write_temp(&s);
+        let cfg = ServerConfig::load_from(&p).expect("should accept max_strength_a=200, max_strength_b=0");
+        assert_eq!(cfg.server.dglab.max_strength_a, 200);
+        assert_eq!(cfg.server.dglab.max_strength_b, 0);
+    }
+
+    #[test]
+    fn max_strength_b_at_200_accepted() {
+        let mut s = MINIMAL_OK.to_string();
+        s = s.replace(
+            "session_id_length = 20",
+            "session_id_length = 20\nmax_strength_b = 200",
+        );
+        let p = write_temp(&s);
+        let cfg = ServerConfig::load_from(&p).expect("should accept max_strength_b=200");
+        assert_eq!(cfg.server.dglab.max_strength_b, 200);
     }
 }

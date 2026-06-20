@@ -103,6 +103,72 @@ last_reviewed: 2026-06-20
 
 ---
 
+## [MVP-0: D1 SQL 迁移到运行时目录 — 自定义 loader + 去日期前缀] - 2026-06-20
+
+> **用户原话触发**："**你的上下文已经是agent里面最新的了，你可以直接开始开发了，顺序自己决定，一定要遵从规范**"
+> 按 §14.3 MVP 优先；MVP-0 是**端到端最小可运行框架**的第一步：D1 SQL 迁移从源码树改到运行时目录。
+
+### Changed
+
+1. **SQL 迁移文件重命名**（去日期前缀，D1 决策）：
+   - `rust/migrations/20260614000001_player_state.sql` → `001_player_state.sql`
+   - 全部 17 个文件按字母序重命名（保留执行顺序；不再有日期/版本号）
+2. **`PostgresSection` 字段变更**：
+   - **删除**误导性字段 `migration_dir_embedded: bool`（其注释说"编译进二进制"但实际**不**是）
+   - **新增** `migration_dir: Option<String>`（运行时目录；`None` 时按 `data_dir` 父目录 + `sql/` 解析）
+3. **`PostgresSection::resolve_migration_dir()`**：解析实际路径（绝对路径 / 相对 cwd / 默认 `<data_dir>/../sql/`）
+4. **新增 `biocapital-cli/src/sql_loader.rs`**：
+   - `run_sql_files(pool, dir)` — 按字母序执行 `*.sql` 文件，**不**用 sqlx::migrate!，**不**带日期
+   - 跳过隐藏文件 / 非 `.sql` 扩展
+   - 报错：目录不存在 / 不是目录
+   - WARN：空目录（视为无可应用迁移）
+   - 每文件用 `sqlx::raw_sql` 执行；幂等性由 SQL 文件自身保证（`IF NOT EXISTS`）
+5. **`main.rs:cmd_migrate()` 改用新 loader**：从 `ServerConfig::resolve_migration_dir()` 取路径
+6. **`main.rs`** 删除 `use std::path::Path` 死代码 + 删除硬编码 `const MIGRATION_DIR` 常量
+
+### Added
+
+- `crates/biocapital-cli/src/sql_loader.rs`（D1 决策实现）
+- `crates/biocapital-cli/src/sql_loader::tests`：2 个测试
+  - `collect_filters_only_sql_files`（过滤隐藏文件 + 非 sql 扩展）
+  - `alphabetical_order_respects_prefix`（字母序）
+- `crates/biocapital-cli/src/lib.rs`：注册 `sql_loader` 模块 + `pub use sql_loader::run_sql_files`
+
+### Tests
+
+- **MVP-0 测试**：
+  - `cargo test -p biocapital-cli` → **15 passed**（13 config + 2 sql_loader）+ 1 doctest
+  - `cargo test --workspace --exclude biocapital-pg` → **所有 crate 通过**
+  - `./gradlew compileJava` → **BUILD SUCCESSFUL**
+- **未做** 端到端 PG 测试（需要实际 PG 实例；MVP-1 后续）
+
+### 审计回路（§21 — 独立 audit subagent）
+
+- 实现：主 agent 单实例
+- 审计：**待派**独立 audit subagent（run_sql_files / resolve_migration_dir / 重命名 17 文件 / test fixture 更新）
+- 审计通过 → commit 到 `dev-raw0`（绝不 main）
+
+### 联动矩阵更新
+
+- `doc/01-cross-cutting-concerns.md §1.1.1`（D1 决策已写）：MVP-0 实现落地该决策
+- `doc/99-integration-matrix.md`：MVP-0 不引入新事件；后续 MVP-1+ 加
+
+### 诚实完成度
+
+- **MVP-0 范围**：
+  - ✅ D1 SQL 运行时目录加载器
+  - ❌ D9 资源同步（后续）
+  - ❌ D15-D17 双目录覆盖（后续）
+  - ❌ D21 客户端硬校验（后续）
+- **总体项目**：仍 ~70%（MVP-0 是**端到端最小框架**的第一步）
+
+### 推送分支
+
+- **dev-raw0**（绝不 main）
+- 审计通过后推送
+
+---
+
 ## [D18-D28 决策校准（Web UI dashboard 架构 / 核心舱交互 / 部位 / 高潮 / 契约）— task #N+2] - 2026-06-20
 
 > **用户原话触发**："**为了防止有歧义，我以我可能作为使用者会体验到的视角模拟浏览一遍我游玩的过程，看看有没有理解上的偏差**"
