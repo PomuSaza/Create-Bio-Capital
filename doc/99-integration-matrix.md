@@ -132,6 +132,18 @@ depends_on: all-modules
 | `CreatureMissingAssetEvent` | 13 | 15 |
 | `CommandExecutedEvent` | 12 | 14, 15 |
 
+> **2026-06-20 新增事件**（D8/D9 决策）：
+
+| 事件 | 触发模块 | 监听模块 | 说明 |
+|---|---|---|---|
+| `BiocapitalLivingEffectEvent.Added` | 02 | 02, 06, 14 | 独立 living effect 系统新增（D8 决策）|
+| `BiocapitalLivingEffectEvent.Removed` | 02 | 02, 06, 14 | living effect 移除 |
+| `BiocapitalLivingEffectEvent.Updated` | 02 | 02, 06, 14 | living effect 状态变化 |
+| `BiocapitalDefeatedStateEvent` | 02 | 02, 07, 14 | **统一战败状态事件**（D3 决策：UI 遮罩层，不是 buff）|
+| `BiocapitalServerConfigSyncEvent` | 14 | 02, 06, 13 | 服务器配置下发（D15/D16 决策）|
+| `BiocapitalResourceSyncEvent` | 14 | 06, 13 | 服务器生物资源下发（D9 决策）|
+| `BiocapitalBankRecoveryEvent` | 02 | 08 | 战败恢复（猫草）|
+
 ### 3.2 KubeJS 绑定
 
 | KubeJS 事件 | 对应 NeoForge 事件 |
@@ -937,6 +949,29 @@ CREATE INDEX idx_audit_environment_request
   - `doc/99-integration-matrix.md` 本节（即 §10.6 自身）
 - **必须经 §21 强制审计回路（独立审计 subagent + 必须改 = 空）才能 commit**（§23）
 - **绝不** commit 到 `main`（§23.3 + §11 #16）
+
+### 10.7 新增/修改 living effect / 服务器同步 / 资源分发（2026-06-20 D8/D9/D15 决策）
+
+> **触发条件**：
+> - 新增 `BiocapitalLivingEffectEvent` 子类型
+> - 修改 `[Recovery] cat_grass_cost` 默认值
+> - 修改服务器资源分发周期（默认 5 min）
+> - 修改 living effect 状态数据 schema
+> - 新增服务端推送到客户端的资源类型（贴图/模型/声音/状态 icon）
+> - 修改 D15 双目录设计的字段映射
+
+- 影响模块：02, 06, 10, 13, 14, 15
+- 需要同步：
+  - `doc/02-player-state.md` §1.1 + §7（living effect 数据模型）
+  - `doc/06-hostile-mobs.md` §2.4 + §2.5（行为 JSON + 服务器分发）
+  - `doc/13-bio-customization.md` §1.2（双目录）
+  - `doc/14-rust-services.md` §2.1（资源同步服务）
+  - `doc/15-web-ui.md` §1（直连 Rust 架构）
+  - `doc/01-cross-cutting-concerns.md` §1.4 + §1.5（D15/D16/D17 + 资源同步）
+  - `doc/11-config-system.md` §4.5（双目录 + `[Recovery]`）
+  - `doc/17-asset-placeholders.md` §5.1 + §5.2（状态 icon + 行为 JSON 占位）
+  - `doc/19-dev-process.md` §2（MVP 拆分示例参考）
+- **必须经 §21 强制审计 + §19-dev-process §2 MVP 拆分**
 
 ---
 

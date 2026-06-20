@@ -588,23 +588,30 @@ depends_on: 00-overview, 01-cross-cutting-concerns, 99-integration-matrix
 
 ## 13. 启动检查清单（Startup Checklist）
 
-每次会话开始时，**必读**这 5 个文件：
+每次会话开始时，**必读**这 6 个文件：
 
 1. `doc/CHANGELOG.md` —— 最近变更 + 最近审计结论 + 当前诚实完成度
 2. `doc/00-overview.md` —— 总览 + 差异 + §2.3 诚实完成度表
 3. `doc/01-cross-cutting-concerns.md` —— 共享约束
 4. `doc/99-integration-matrix.md` —— 联动矩阵
-5. **memory/MEMORY.md** —— 跨会话记忆索引（用户偏好 + 反馈 + 项目状态）
+5. `doc/19-dev-process.md` —— **MVP 优先工作纪律**（2026-06-20 新增）
+6. `memory/MEMORY.md` —— 跨会话记忆索引（用户偏好 + 反馈 + 项目状态）
 
 **然后**按模块索引定位到**目标模块** .md，开始工作。
 
-> **2026-06-20 修订**：新增第 5 项「memory/MEMORY.md」。所有 subagent / 新会话必须把跨会话记忆当一等公民加载，**不能只读 doc 就以为掌握了项目状态**。
+> **2026-06-20 修订**：新增第 5 项 `doc/19-dev-process.md`（MVP 优先纪律）+ 第 6 项 `memory/MEMORY.md`。
+> 所有 subagent / 新会话必须把跨会话记忆当一等公民加载，**不能只读 doc 就以为掌握了项目状态**；
+> 所有"功能"级任务**必须**先按 §14.3 + 19-dev-process §1–§3 走 MVP 拆分。
 
 ---
 
 ## 14. 工作循环（Work Loop — 执行 → 审计 → 改进）
 
 每个模块的实现任务遵循**三步强制回路**。**未经完整回路不得标「完成」，不得 commit，不得进入下一模块。**
+
+> **2026-06-20 补充**（D14 决策）：任何"功能"级任务**必须**先按 [`doc/19-dev-process.md`](19-dev-process.md) §1–§3 **MVP 优先**拆分。
+> MVP 子集（`.0` task）**必须**先完成并经 §21 审计通过；后续增（`.1+` task）显式不做的内容**必须**列在 task 描述里。
+> 违反此条按 §11 #11 处置（**不**校验反问就推进）。
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -691,6 +698,56 @@ depends_on: 00-overview, 01-cross-cutting-concerns, 99-integration-matrix
 ```
 
 ### 14.2 单 turn 自检
+
+（保留原 12 步自检；MVP 优先拆分检查在 §14.3）
+
+### 14.3 MVP 优先工作纪律（2026-06-20 新增）
+
+> **强约束**：所有"功能"级任务（task #N.0+）**必须**先回答三个问题：
+
+1. **MVP 是什么？** —— 砍掉锦上添花，只保留端到端跑通的最少功能；显式列出"不做"的特性
+2. **后续增是否本任务内做？** —— 默认**不做**；如做，**显式**说明原因
+3. **MVP 是否经 §21 审计？** —— 不经审计的 MVP **不得**标完成
+
+详见 `doc/19-dev-process.md` §1–§3（含 buff/debuff + CorePod 两个拆分示例）。
+
+#### 14.3.1 TaskCreate 拆分
+
+```
+[Task #N.0] 功能 X — MVP（端到端跑通 + 审计通过）
+[Task #N.1] 功能 X — 后续增 A（不进 MVP）
+[Task #N.2] 功能 X — 后续增 B（不进 MVP）
+...
+```
+
+`.0` 永远第一个；`.1+` 后续。
+
+#### 14.3.2 任务描述必含
+
+```
+MVP 范围（必做）：<bullet list>
+显式不做（留后续 task）：<bullet list>  ← 必须显式列出
+审计回路：Step 1 EXECUTE / Step 2 AUDIT / Step 3a/3b
+```
+
+#### 14.3.3 反模式
+
+- ❌ "MVP + 后续增" 一起做、无拆分 → **错**
+- ❌ "MVP 跑通就标完成" → **错**；必须经 §21 审计
+- ❌ "显式不做" 不显式列出 → **错**；task 描述里**必须**列
+- ❌ MVP 阶段就实现 15+ effect icon 全套 → **错**；icon 留后续增
+
+#### 14.3.4 MVP 完成度评估（`must-fix = 0` 后）
+
+| 维度 | 必须满足 |
+|---|---|
+| 端到端跑通 | ✅（cargo test / gradlew / e2e 至少 1 个）|
+| 显式不做段已列 | ✅ |
+| 文档同步 | ✅ |
+| 审计通过 | ✅（独立 audit subagent）|
+| Commit 到位 | ✅（当前分支，**不** main）|
+
+**任一不满足 → 不得标 MVP 完成，不得进下一 task**。
 
 ```
 1. 理解用户请求 ─► 拆解为子任务
@@ -803,6 +860,7 @@ depends_on: 00-overview, 01-cross-cutting-concerns, 99-integration-matrix
 | `doc/01-cross-cutting-concerns.md` | 跨模块约束 |
 | `doc/08-bank.md` ⭐ | 银行（PRIORITY）|
 | `doc/14-rust-services.md` ⭐ | Rust 服务（PRIORITY）|
+| `doc/19-dev-process.md` | **MVP 优先工作纪律**（2026-06-20 新增）|
 | `doc/99-integration-matrix.md` | 联动矩阵（变更必查必改）|
 | `doc/CHANGELOG.md` | 完整变更与诚实完成度 |
 | `wiki/JavaAudit.md` | Java 端审计（2026-06-18）|
@@ -813,6 +871,8 @@ depends_on: 00-overview, 01-cross-cutting-concerns, 99-integration-matrix
 | `wiki-main/` | Create 文档 |
 | `Documentation-main/` | NeoForge 文档 |
 | `src/main/java/mo/dystopia/biocapital/` | 现有 Java 实现（仅 JNI/NeoForge 衔接）|
+| `dglab/websocket/v2/README.md` | **DG_LAB 标准协议**（v2，N 对 N 转发）|
+| `dglab/bluetooth/v3/README.md` | **DG_LAB Coyote V3 蓝牙协议**（B0/BF/B1）|
 
 ---
 
@@ -1148,9 +1208,10 @@ README.md 必须在下列时机更新：
 2. doc/00-overview.md（含 §2.3 诚实完成度）
 3. doc/01-cross-cutting-concerns.md
 4. doc/99-integration-matrix.md
-5. memory/MEMORY.md（跨会话记忆索引）
+5. doc/19-dev-process.md（MVP 优先工作纪律 — 2026-06-20 新增）
+6. memory/MEMORY.md（跨会话记忆索引）
 
-工作循环见 §14（执行 → 审计 → 改进回路）；
+工作循环见 §14（执行 → 审计 → 改进回路）+ §14.3（MVP 优先拆分）；
 实时文档纪律见 §20；
 代码审计回路见 §21（独立审计 subagent + 必须改 / 建议改 / 可不改 三档）；
 诚实交付见 §22（不粉饰完成度）；

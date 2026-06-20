@@ -28,21 +28,37 @@
 
 ## 🎯 项目简介与特点
 
-Create: Bio-Capital 是一个把 Create 模组的大工业生产力与「虚拟社会模拟」深度绑定的附属模组。**目标不是单纯增加方块，而是构建一套完整的、由服务端权威主导的虚拟经济与契约系统。**
+> **2026-06-20 用户原话**（D11 决策）：
+>
+> "设定上这是一个**虚拟城镇的建设的沙盒**，本质上补充了之前 Minecraft **没有的色情玩法**，并且补充了**没有办法在其中建立可追溯的可持续的社会的缺陷**。"
+> "项目核心在于**打破传统生存模式的死亡惩罚与道德上层干预**，通过将玩家的**感官体验与生理数据深度绑定**，转化为**机械动力框架下可量化、可交易的工业资产**。"
+> "项目将在此高自由度的经济网络中，**自发演进并共建具备高度交互性的二次元城镇文明**。"
+> "**开发流程是先做出一个可运行的最小版本作为框架然后陆续的添加需要的功能**。"
 
-### 核心特点
+### 5 条核心定位
+
+1. **核心定位**：虚拟城镇建设沙盒
+2. **核心玩法**：补充 Minecraft 缺失的色情玩法 + 可追溯的可持续社会
+3. **核心机制**：打破传统生存模式的死亡惩罚 + 道德上层干预
+4. **核心绑定**：感官体验 + 生理数据 → 机械动力框架下可量化、可交易的工业资产
+5. **核心涌现**：高自由度经济网络 → 自发演进的二次元城镇文明
+
+### 核心特点（D6 决策校准后）
 
 | 维度 | 特点 |
 |---|---|
-| **去致死化生存** | 所有原版致死伤害被路由到「隐性血量（hidden_hp）」池；玩家通过「快感值（pleasure）」+「饥饿值（hunger）」两条可见状态条感知健康；死亡被替换为「隐性战败（defeat_state）」非标准 buff，纯客户端表现 |
-| **部位开发度** | 12 个 BodyPart 枚举（HEAD/NECK/CHEST/BELLY/GENITAL/BUTT/BACK/LEFT_ARM/RIGHT_ARM/LEFT_LEG/RIGHT_LEG/FEET），每个部位独立开发度，工业生产被动加成 |
-| **大工业整合** | 核心舱（1×2×1 多方块）+ ATM + 搅拌机 + 流体管道完全遵循 Create 6.0.10 的应力网络（Kinetic Network）+ 流体管道网络（Fluid Network）+ 条板箱（Create Depot / Item Hatch）模式 |
-| **服务端权威** | 银行账本、奴隶合约、核心舱生产公式、PostgreSQL 持久化、DG_LAB 网关**全部由独立 Rust 服务进程承担**；Java 端只保留输入采集与渲染 |
-| **银行账本** | 通用货币「猫草（Cat Grass，单格堆叠 1000，批次号追踪）」；银行卡 DataComponent `OwnerUUID`；ATM 虚拟化条板箱；设备锁定（`device_lock`）+ 邀请码解绑 |
-| **奴隶契约** | 完整的合约生命周期（propose / accept / reject / terminate / redeem）；Web UI 浏览与操作；强制审计 |
-| **DG_LAB 硬件联动** | 通过标准 WebSocket 协议对接 Rust 服务（不经 Java）；15 种 waveform；strength-0+m+a+b / strength-c+m+v；事件分发与并发连接互踢 |
-| **多附属可联动** | 暴露 NeoForge 事件总线 hook + KubeJS bindings + JSON hook 描述符；3rd-party 附属可热加载挂接 |
-| **诚实完成度** | 所有路由 / handler / PG / SSE / Auth / Prometheus 都 OK（~70% 生产可用）；5 个已知未解缺口**如实**记录，不粉饰 |
+| **去致死化生存** | HP=0 **不**死亡，触发**战败状态**（D3：**UI 遮罩层**，不是 buff）；玩家可「放弃物品回床」或「用猫草恢复」；部位开发度**不**变；正 buff 不动 |
+| **独立 living effect 系统** | D8 决策：自定义 `BiocapitalLivingEffects`（用 NeoForge `Attachment`），**不**走 vanilla `MobEffect`（vanilla 有 duration timer，不适合"状态性"buff 如淫纹）|
+| **部位开发度** | 12 个 BodyPart 枚举；每个部位独立开发度；**与战败/HP 状态独立** |
+| **大工业整合** | 核心舱（1×2×1 多方块，**岩浆输入**，**机械动力 + 抽液机输出**）+ ATM + 流体管道 + 条板箱（Create Depot）|
+| **服务端权威** | 银行账本、奴隶合约、核心舱生产公式、PostgreSQL 持久化、**资源同步**全部由独立 Rust 服务进程承担；Java 端只保留输入采集 + 渲染 + **MC 客户端连手机 WS** |
+| **银行账本** | 通用货币「猫草」单格堆叠 1000，批次号追踪；银行卡 DataComponent `OwnerUUID`；ATM 虚拟化条板箱；设备锁定 + 邀请码解绑 |
+| **奴隶契约** | 完整合约生命周期（propose/accept/reject/terminate/redeem）；Web UI 浏览与操作；强制审计 |
+| **DG_LAB 硬件联动** | **D6 决策**：手机蓝牙连 Coyote V3 硬件；**手机跑 LAN WS**（port 9999）；**MC 客户端**连手机 WS；**Rust 不中转** DG_LAB 指令；标准 v2 协议 |
+| **服务器资源分发** | D9 决策：服务器可下发自定义生物行为 JSON + 状态 icon + 贴图/模型/声音；玩家进服 + 5 min hash 检查后增量同步；**不**污染玩家本地 |
+| **配置覆盖** | D15/D16/D17 决策：双目录（玩家本地 + 服务器下发）；进服 + 5 min hash 检查同步；**所有**配置都被服务器覆盖 |
+| **多附属可联动** | 暴露 NeoForge 事件总线 hook + KubeJS bindings + JSON hook 描述符 |
+| **诚实完成度** | 总体 ~70% 生产可用；5 个已知未解缺口 + 文档/进程层面 90% |
 
 ---
 
@@ -78,46 +94,76 @@ Create: Bio-Capital 是一个把 Create 模组的大工业生产力与「虚拟�
 
 ---
 
-## 🏗 架构
+## 🏗 架构（D6 决策校准后）
+
+> **关键**：Rust **不**作为 DG_LAB 网关；MC 客户端**独立**连手机 WS。
 
 ```
-┌────────────────────────────────┐       gRPC (TCP)        ┌─────────────────────────┐
-│  Minecraft 客户端 / Java 端    │ ───────────────────────▶│  Rust 服务端（独立进程）│
-│  - NeoForge 1.21.1 模组         │   玩家事件 / 生产数据   │  - axum + tokio + sqlx │
-│  - KubeJS bindings              │ ◀───────────────────────│  - PostgreSQL 同级目录   │
-│  - Create 6.0.10 slim.jar       │   银行转账 / 合约操作   │  - DG_LAB WebSocket 网关│
-└────────────────────────────────┘                          └─────────────────────────┘
-                                                                        ▲
-                                                                        │ WebSocket
-                                                                        ▼
-                                                              ┌──────────────────┐
-                                                              │   DG_LAB 硬件    │
-                                                              └──────────────────┘
-                                                                        ▲
-                                                                        │ HTTP/REST
-                                                                        ▼
-                                                              ┌──────────────────┐
-                                                              │   React Web UI   │
-                                                              └──────────────────┘
+                                  ┌────────────────────────┐
+                                  │    Rust 服务进程         │
+                                  │  (axum + tokio + sqlx)  │
+                                  │  - 银行账本              │
+                                  │  - 合约 / Core Pod 公式  │
+                                  │  - PG 同级目录           │
+                                  │  - HTTP / gRPC / SSE    │
+                                  │  - 资源同步服务 (5 min)  │
+                                  └────────┬───────────────┘
+                                           │
+                            gRPC + HTTP + SSE
+                                           │
+                                           ▼
+┌──────────────────────┐         ┌────────────────────────┐
+│  MC 客户端 / Java 端  │         │   React Web UI         │
+│  - NeoForge 1.21.1   │         │  - 数值查询 / 转账      │
+│  - HUD / 事件采集     │         │  - 合约浏览 / 审计导出  │
+│  - living effect 渲染│         │  - viewer token 鉴权   │
+│  - WS client (LAN)  │         └────────────────────────┘
+│  - pleasure→强度算法 │                  ▲
+│  - 强度指令→玩具     │                  │ HTTP/REST
+└─────────┬───────────┘                  │
+          │                              │
+          │ WebSocket (LAN)              │
+          │ (DG_LAB 标准 v2 协议)         │
+          ▼                              │
+┌──────────────────────┐                │
+│  DG_LAB 手机 App     │                │
+│  - LAN WS server     │                │
+│  - port 9999         │                │
+│  - 二维码配对          │                │
+└─────────┬───────────┘                │
+          │                              │
+          │ Bluetooth                    │
+          ▼                              │
+┌──────────────────────┐                │
+│  Coyote V3 硬件       │                │
+│  - A/B 双通道          │                │
+│  - 强度 0~200         │                │
+│  - 软上限断电保存       │                │
+└──────────────────────┘                │
+                                        │
+   ★ Rust 不经手机 WS ──────────────────┘
+   ★ Rust 不中转 DG_LAB 指令
+   ★ Rust 只读/写游戏数据
 ```
 
-### 三层职责
+### 三层职责（D6 校准后）
 
 | 层 | 语言 | 职责 | 不应负责 |
 |---|---|---|---|
-| 客户端/集成层 | Java (NeoForge 1.21.1) | 方块/物品/流体/实体注册、HUD 渲染、Create 应力/流体网络桥、用户右键事件采集、Create 工具交互适配 | 经济账本、合约逻辑、数据库、DG_LAB 通信 |
-| 服务端 | Rust (axum + tokio + sqlx-postgres) | 银行账本、奴隶合约、核心舱生产公式、PostgreSQL 持久化、DG_LAB 网关、Web UI 数据源、审计日志、心跳 | 方块实体渲染、Create 网络细节 |
-| Web UI | React + TypeScript SPA | 数值查询页、银行转账页、合约浏览页、审计导出 | 任何游戏内交互 |
+| 客户端/集成层 | Java (NeoForge 1.21.1) | 方块/物品/流体/实体注册、HUD 渲染、Create 应力/流体网络桥、用户右键事件采集、living effect 渲染、**WebSocket client 连手机 LAN WS**、**pleasure → 强度算法本地执行** | 经济账本、合约逻辑、数据库、**DG_LAB 中转** |
+| 服务端 | Rust (axum + tokio + sqlx-postgres) | 银行账本、奴隶合约、核心舱生产公式、PostgreSQL 持久化、HTTP / gRPC / SSE 供 Web UI、审计日志、心跳、**周期性 config + 生物资源同步** | 方块实体渲染、Create 网络细节、**DG_LAB WebSocket 网关**、**WS 转发** |
+| 手机 / 硬件 | DG_LAB APP + Coyote V3 | APP 提供 LAN WebSocket server (port 9999) + 二维码配对；Coyote V3 蓝牙连接 APP，执行强度 + 波形指令 | 游戏数据计算、网络层中转 |
+| Web UI | React + TypeScript SPA | 数值查询页、银行转账页、合约浏览页、审计导出；**直连 Rust HTTP + SSE**，**不经 DG_LAB 任何东西** | 任何游戏内交互 |
 
-### Rust 工作区（`rust/crates/`）
+### Rust 工作区（`rust/crates/`）（D6 校准后）
 
 | Crate | 职责 |
 |---|---|
-| `biocapital-cli` | 启动器：detect PG、migrate、启动 HTTP/gRPC/WebSocket |
+| `biocapital-cli` | 启动器：detect PG、运行 SQL（**D1**：从运行时目录 `config/biocapital/sql/`）、启动 gRPC + HTTP（**不**启动 WebSocket — D6）|
 | `biocapital-grpc` | Tonic gRPC server / client |
 | `biocapital-jni` | JNI 桥：被 Java `NativeRustBindings.call*` 调用 |
-| `biocapital-pg` | sqlx-postgres 仓库层 + migration runner |
-| `biocapital-webui` | axum HTTP + SSE + 鉴权 + admin/audit/bank/contract/players 路由 |
+| `biocapital-pg` | sqlx-postgres 仓库层 + D1 SQL 加载（运行时目录）|
+| `biocapital-webui` | axum HTTP + SSE + 鉴权 + admin/audit/bank/contract/players 路由 + **D9 资源同步服务** |
 
 ### Java 端最小集（**仅**衔接 NeoForge + JNI）
 

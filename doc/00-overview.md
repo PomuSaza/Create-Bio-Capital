@@ -15,46 +15,88 @@ last_reviewed: 2026-06-14
 
 ## 1. 项目愿景（Vision）
 
-为 Minecraft 1.21.1 × NeoForge × Create 6.0.10 生态构建一个**完整的虚拟社会沙盒附属**。
+> **2026-06-20 用户原话**（D11 决策覆写原 §1）：
+>
+> "设定上这是一个**虚拟城镇的建设的沙盒**，本质上补充了之前 Minecraft **没有的色情玩法**，并且补充了**没有办法在其中建立可追溯的可持续的社会的缺陷**。"
+> "项目核心在于**打破传统生存模式的死亡惩罚与道德上层干预**，通过将玩家的**感官体验与生理数据深度绑定**，转化为**机械动力框架下可量化、可交易的工业资产**。"
+> "项目将在此高自由度的经济网络中，**自发演进并共建具备高度交互性的二次元城镇文明**。"
+> "**开发流程是先做出一个可运行的最小版本作为框架然后陆续的添加需要的功能**。"
 
-- **去致死化生存**：所有原版致死伤害被路由到「隐性血量」池，配合「快感值（pleasure）」「饥饿值（hunger）」两条可见状态条与「部位开发度（per-BodyPart development）」机制构成核心玩法循环。
-- **大工业整合**：核心舱、ATM、搅拌机、流体管道等设施完全遵循 **Create 6.0.10 的应力网络（Kinetic Network）+ 流体管道网络（Fluid Network）+ 条板箱（Create Depot / Item Hatch）模式**。
-- **服务器侧主导**：所有金融、合约、生产事件由独立的 Rust 服务进程承担；Java 端只保留**输入采集**（右键、漏斗推送、状态广播）与**渲染**。原 Java 代码灰度退役。
-- **硬件联动**：DG_LAB 通过标准 WebSocket 协议对接 Rust 服务（不经 Java）。
-- **多附属可联动**：暴露 NeoForge 事件总线 hook + KubeJS 绑定 + JSON hook 描述符。
+> **5 条核心定位**（D11 提炼）：
+
+1. **核心定位**：虚拟城镇建设沙盒
+2. **核心玩法**：补充 Minecraft 缺失的色情玩法 + 可追溯的可持续社会
+3. **核心机制**：打破传统生存模式的死亡惩罚 + 道德上层干预
+4. **核心绑定**：感官体验 + 生理数据 → 机械动力框架下可量化、可交易的工业资产
+5. **核心涌现**：高自由度经济网络 → 自发演进的二次元城镇文明
+
+> **开发流程**（D14）：**先做 MVP 框架，再陆续添加功能**。详见 [`doc/19-dev-process.md`](19-dev-process.md)。
 
 ---
 
 ## 2. 架构总览
 
+> **2026-06-20 D6 决策覆写**：原架构图把 Web UI 接在 DG_LAB 上、误把 Rust 写为 "DG_LAB WebSocket 网关"。**全部错**。
+> 真实架构：**Rust 不直接控制 DG_LAB**（手机是 DG_LAB 的控制端）；Minecraft 客户端**独立**连手机 LAN WS；Rust 仅提供游戏数据。
+
 ```
-┌────────────────────────────────┐       gRPC (TCP)        ┌─────────────────────────┐
-│  Minecraft 客户端 / Java 端    │ ───────────────────────▶│  Rust 服务端（独立进程）│
-│  - NeoForge 1.21.1 模组         │   玩家事件 / 生产数据   │  - axum + tokio + sqlx │
-│  - KubeJS bindings              │ ◀───────────────────────│  - PostgreSQL 同级目录   │
-│  - Create 6.0.10 slim.jar       │   银行转账 / 合约操作   │  - DG_LAB WebSocket 网关│
-└────────────────────────────────┘                          └─────────────────────────┘
-                                                                        ▲
-                                                                        │ WebSocket
-                                                                        ▼
-                                                              ┌──────────────────┐
-                                                              │   DG_LAB 硬件    │
-                                                              └──────────────────┘
-                                                                        ▲
-                                                                        │ HTTP/REST
-                                                                        ▼
-                                                              ┌──────────────────┐
-                                                              │   React Web UI   │
-                                                              └──────────────────┘
+                                  ┌────────────────────────┐
+                                  │    Rust 服务进程         │
+                                  │  (axum + tokio + sqlx)  │
+                                  │  - 银行账本              │
+                                  │  - 合约 / Core Pod 公式  │
+                                  │  - PG 同级目录           │
+                                  │  - HTTP / gRPC / SSE    │
+                                  └──────────┬─────────────┘
+                                             │
+                          gRPC (TCP) + HTTP + SSE
+                                             │
+                                             ▼
+┌──────────────────────┐              ┌────────────────────────┐
+│  MC 客户端 / Java 端  │              │   React Web UI         │
+│  - NeoForge 1.21.1   │              │  - 数值查询 / 转账      │
+│  - HUD / 事件采集     │              │  - 合约浏览 / 审计导出  │
+│  - living effect 渲染│              │  - viewer token 鉴权   │
+│  - WebSocket client  │              └────────────────────────┘
+│     (连手机 LAN WS)   │                          ▲
+│                      │                          │ HTTP/REST
+│  ★ MC 客户端算        │                          │
+│  ★ pleasure → 强度    │      ┌──────────────────┘
+│  ★ 强度指令 → 玩具     │      │
+└────────┬─────────────┘       │
+         │                     │
+         │  WebSocket (LAN)    │  HTTP/REST
+         │  (DG_LAB 标准协议)   │
+         ▼                     │
+┌──────────────────────┐       │
+│   DG_LAB 手机 APP     │       │
+│  - 局域网 WS server   │       │
+│  - port 9999          │       │
+│  - 二维码配对          │       │
+└────────┬─────────────┘       │
+         │                     │
+         │ Bluetooth           │
+         ▼                     │
+┌──────────────────────┐       │
+│  Coyote V3 硬件       │       │
+│  - A/B 双通道          │       │
+│  - 强度 0~200         │       │
+│  - 软上限断电保存       │       │
+└──────────────────────┘       │
+                               │
+       ★ Rust 不经手机 WS ────┘
+       ★ Rust 不中转 DG_LAB 指令
+       ★ Rust 只读/写游戏数据（pleasure、HP、part_dev、buff）
 ```
 
 ### 2.1 三层职责
 
 | 层 | 语言 | 职责 | 不应负责 |
 |---|---|---|---|
-| 客户端/集成层 | Java (NeoForge 1.21.1) | 方块/物品/流体/实体注册、HUD 渲染、Create 应力/流体网络桥、用户右键事件采集、Create 工具交互适配 | 经济账本、合约逻辑、数据库、DG_LAB 通信 |
-| 服务端 | Rust (axum + tokio + sqlx-postgres) | 银行账本、奴隶合约、核心舱生产公式、PostgreSQL 持久化、DG_LAB 网关、Web UI 数据源、审计日志、心跳 | 方块实体渲染、Create 网络细节 |
-| Web UI | React + TypeScript SPA | 数值查询页、银行转账页、合约浏览页、审计导出 | 任何游戏内交互 |
+| 客户端/集成层 | Java (NeoForge 1.21.1) | 方块/物品/流体/实体注册、HUD 渲染、Create 应力/流体网络桥、用户右键事件采集、living effect 渲染、**WebSocket client 连手机 LAN WS**、**pleasure → 强度算法本地执行** | 经济账本、合约逻辑、数据库、**DG_LAB 中转** |
+| 服务端 | Rust (axum + tokio + sqlx-postgres) | 银行账本、奴隶合约、核心舱生产公式、PostgreSQL 持久化、HTTP / gRPC / SSE 供 Web UI、审计日志、心跳、**周期性 config + 生物资源同步** | 方块实体渲染、Create 网络细节、**DG_LAB WebSocket 网关**、**WebSocket 转发** |
+| 手机 / 硬件 | DG_LAB APP + Coyote V3 | APP 提供 LAN WebSocket server (port 9999) + 二维码配对；Coyote V3 蓝牙连接 APP，执行强度 + 波形指令 | 游戏数据计算、网络层中转 |
+| Web UI | React + TypeScript SPA | 数值查询页、银行转账页、合约浏览页、审计导出；**直连 Rust HTTP + SSE**，**不经 DG_LAB 任何东西** | 任何游戏内交互 |
 
 ### 2.2 Rust 重写范围（全量重写，Java 端彻底删除业务）
 
@@ -158,6 +200,10 @@ byte buffer，Rust JNI dispatch 用 `Debug` UTF-8 占位），因此从 Java
 | Sable 集成 | N/A | 声明依赖 Sable（采用其 JNI + Docker buildRustNatives 架构） | 用户指定 |
 | 联动点 | N/A | NeoForge 事件 + KubeJS + JSON hook + 文档 | 用户指定 |
 | 服务器优化 | N/A | 仅指标描述（具体预算由各模块决定） | 用户指定 |
+| Sable 许可 | 待用户决定 | **Sable Polyform Shield 1.0.0**（D7 用户覆写 — 已确定，不再"待决定"）| 2026-06-20 |
+| 服务器配置覆盖 | 默认本地优先 | **服务器下发覆盖**（进服 + 5 min hash 检查；D15/D16/D17 决策）| 2026-06-20 |
+| 服务器 vs 玩家配置 | 单一目录 | **双目录**：玩家本地 `config/biocapital/` + 服务器下发 `config/biocapital-online/<server_id>/`（不污染本地）| 2026-06-20 |
+| 资源周期性同步 | 仅启动期加载 | **周期性同步**（玩家进服 + 5 min 间隔，hash 检查后增量；D9 决策）| 2026-06-20 |
 
 ---
 
@@ -194,6 +240,8 @@ byte buffer，Rust JNI dispatch 用 `Debug` UTF-8 占位），因此从 Java
 | `15-web-ui.md` | Web UI 路由表与数据契约 |
 | `16-sable-bridge.md` | Sable JNI 集成模式 |
 | `17-asset-placeholders.md` | 资源占位文件策略 |
+| `18-tg-whitelist.md` | TG 群白名单 |
+| `19-dev-process.md` | **MVP 优先工作纪律**（2026-06-20 新增；D14 决策）|
 | `99-integration-matrix.md` | 模块依赖矩阵与变更影响 |
 | `SYSTEM_PROMPT.md` | agent 驱动入口（多 agent 编排器规则） |
 | `assets/creatures/_template/` | 生物自定义模板（占位文件） |
