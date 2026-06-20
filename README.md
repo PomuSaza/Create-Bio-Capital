@@ -185,6 +185,9 @@
 
 ## 🎮 玩家指南
 
+> **2026-06-20 MVP-3 更新**：Minecraft 客户端 HUD 尚未实测（需要真实 MC runtime）。但 **Rust 服务端 + HTTP API + JNI 符号匹配 + 6/6 e2e 端到端 PASS** 已实测。
+> 完整 run 步骤 + 验证矩阵见 **[`doc/RUN.md`](doc/RUN.md)** —— 一行命令就能跑完所有无 Minecraft 测试。
+
 ### 安装
 
 1. 确认客户端：Minecraft 1.21.1 + NeoForge + Create 6.0.10
@@ -192,6 +195,8 @@
 3. 放入 `mods/` 目录
 4. 启动游戏一次 → 生成 `config/create_biocapital.toml`
 5. 启动 Rust 服务（由服务器管理员部署，玩家无需关心）
+
+> **当前 MVP-3 状态**：Rust server + Web UI + e2e 6/6 PASS 已**实测**。Minecraft 客户端 HUD 渲染**未实测**（需要真实 MC 客户端）。完整 run 步骤见 [`doc/RUN.md`](doc/RUN.md)。
 
 ### 加入服务器
 
@@ -244,6 +249,7 @@
 
 1. **`README.md`（本文件）**—— 项目全貌与诚实状态
 2. **`doc/00-overview.md`** —— 愿景、架构、译名表、§2.3 诚实完成度、§4 设计取舍
+3. **`doc/RUN.md`** —— 怎么 run + 怎么核实（2026-06-20 MVP-3 新增；30 秒 TL;DR + 验证矩阵）
 3. **`doc/01-cross-cutting-concerns.md`** —— 跨模块共享约束（**冲突时以此为准**）
 4. **`doc/14-rust-services.md`** ⭐ —— Rust 服务架构 + gRPC schema
 5. **`doc/16-sable-bridge.md`** —— Java↔Rust JNI 调用模式
@@ -422,18 +428,6 @@ Step 3b: COMMIT（自主 commit） 若必须改 = 空
 | [`wiki/BuildRequirements.md`](wiki/BuildRequirements.md) | 构建依赖 |
 | [`memory/MEMORY.md`](memory/MEMORY.md) | 跨会话记忆索引 |
 
-### 外部仓库
-
-| 仓库 | 用途 |
-|---|---|
-| [Sable](https://github.com/ryanhcode/sable) | JNI + Docker buildRustNatives |
-| [Create](https://github.com/Creators-of-Create/Create) | 工业模组 |
-| [NeoForge](https://github.com/neoforged/NeoForge) | Minecraft 1.21 模组加载器 |
-| [DGLabCraft](https://github.com/CaiJi-ikun/DG_LAB) | DG_LAB 协议参考 |
-| [JustARod](https://github.com/CSneko/JustARod) | 鱼竿触发参考 |
-| [Minecraft Wiki](https://minecraft.wiki/) | 原版机制参考 |
-
----
 
 ## ⚠️ 重要声明
 

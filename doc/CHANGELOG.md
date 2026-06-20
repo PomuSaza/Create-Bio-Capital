@@ -103,6 +103,59 @@ last_reviewed: 2026-06-20
 
 ---
 
+## [MVP-3.0 + MVP-3.1: Java 客户端 mod 可启动 + JNI 集成测试 + RUN.md] - 2026-06-20
+
+> 用户原话："**现在还无法 run client，我不清楚如何去核实到底做到了什么程度**"
+> MVP-3 目标：① 让 Java mod 可启动（生成 mod JAR + 验证 JNI 通路）；② 给用户一份**怎么 run + 怎么核实**的清单。
+
+### Added
+
+1. **`src/test/java/mo/dystopia/biocapital/JniIntegrationTest.java`**（MVP-3.1）—— 3 个 JNI 集成测试：
+   - `nativeLibraryFileExists` — 检查 `build/natives/linux-x86_64/libbiocapital_jni.so` 存在且大小 > 1 MB
+   - `nativeLibraryExportsAllTwelveJniSymbols` — 用 `nm -D` 验证 12 个 JNI 符号都在 .so 里
+   - `protoClassesWereGenerated` — 验证 gradle `:generateProto` 跑了（142+ proto class）
+2. **`doc/RUN.md`**（MVP-3.2）—— 完整 run 文档：
+   - 30 秒 TL;DR（一行命令跑通无 Minecraft 测试）
+   - 详细 5 步 setup（依赖 → PG → Rust native lib → server → e2e）
+   - **验证矩阵**：✅ 无 MC 也能验证（10 项）vs ⚠️ 需要 MC（6 项）vs ❌ 当前未实现（7 项）
+   - 已知 run 限制（Docker 不通 + 端口冲突 + Gradle cache + 无 MC runtime）
+   - 引用：CHANGELOG + 00-overview §2.3 + e2e.sh
+
+### Changed
+
+1. **`README.md` §"玩家指南"** + §"开发者接入指南"：明确标注 MVP-3 状态（Rust + e2e 已实测；MC HUD 未实测），加链接到 `doc/RUN.md`
+
+### Verified（实测）
+
+- `cargo build -p biocapital-jni`：本地 cargo 编 .so（绕过 docker buildRustNatives）
+- `cp target/debug/libbiocapital_jni.so build/natives/linux-x86_64/`
+- `./gradlew jar -x buildRustNatives`：**BUILD SUCCESSFUL**，mod JAR `create_biocapital-1.0-SNAPSHOT.jar`（1 MB，383 文件）
+- `./gradlew test -x buildRustNatives`：**10/10 tests pass**（7 wire format + 3 JNI integration）
+- `nm -D libbiocapital_jni.so | grep "Java_mo_dystopia_biocapital_NativeRustBindings"`：**12/12 symbols**（init0 + callPlayerState0 + callBank0 + callCorePod0 + callContract0 + callEnvironment0 + callCreature0 + callDglab0 + callHostileMob0 + callAudit0 + callGrantViewer0 + computePodStress0）
+
+### 实际生产可用度
+
+- **MVP-3 之前**：~75%（Rust 端端到端 OK；Java 客户端未验证能否加载）
+- **MVP-3 之后**：**~75%**（mod JAR 生成 OK + JNI 符号匹配 OK + Java 测试 10/10；但**MC HUD 渲染未实测**，需要真实 Minecraft runtime）
+
+### 联动矩阵更新
+
+- `doc/RUN.md`：新建，作为 MVP-3 的诚实 run 文档
+- `README.md`：链接 RUN.md；明确标注 MC 客户端未实测
+
+### 推送分支
+
+- **dev-raw0**（绝不 main）
+- 前置 commit：`4f5f075`（MVP-0.1）
+
+### 诚实未解缺口（未做）
+
+- **Minecraft HUD 实际渲染**：需要真实 MC 1.21.1 + NeoForge + Create 6.0.10 客户端；mod JAR 已生成、JNI 符号已匹配，但**实际加载 + 渲染 + 玩家体验**未实测
+- **MVP-2 cat grass 战败恢复**（D4/D5/D20）**仍**未实现（task #39）
+- **D8/D9/D15/D17/D21/D26 等 doc-only 决策** 仍未写代码
+
+---
+
 ## [MVP-0.1: SQL 幂等性修复 + 真实 PG 端到端 6/6 PASS] - 2026-06-20
 
 > 紧接 MVP-0 commit (`f4f6229`)。**真实 PG 端到端跑通**发现 MVP-0 SQL loader 在二次运行时挂掉。
